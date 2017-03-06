@@ -1,0 +1,404 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "coreuser"
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "Testcore@123"
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "westus",
+            "allowedValues": [
+                "Brazil South",
+                "brazilsouth",
+                "East Asia",
+                "eastasia",
+                "East US",
+                "eastus",
+                "Japan East",
+                "japaneast",
+                "Japan West",
+                "japanwest",
+                "North Central US",
+                "northcentralus",
+                "North Europe",
+                "northeurope",
+                "South Central US",
+                "southcentralus",
+                "West Europe",
+                "westeurope",
+                "West US",
+                "westus",
+                "Southeast Asia",
+                "southeastasia",
+                "Central US",
+                "centralus",
+                "East US 2",
+                "eastus2"
+            ],
+            "metadata": {
+                "description": "Deployment Location Hint: Use lowercase for creating ipaddress"
+            }
+        },
+        "nodeCount": {
+            "type": "int",
+            "defaultValue": 3
+        }
+    },
+    "variables": {
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]",
+        "clusterPrefix": "coreos",
+        "computeApiVersion": "2016-03-30",
+        "networkApiVersion": "2016-06-01",
+        "StorageApiVersion": "2015-06-15",
+        "publicIPdnsPrefix": "[concat(variables('clusterPrefix'),'dns',variables('suffix'))]",
+        "lbpublicIPdnsPrefix": "[concat(variables('clusterPrefix'),'lbdns',variables('suffix'))]",
+        "avsetName": "[concat(variables('clusterPrefix'),'-avset')]",
+        "pipName": "[concat(variables('clusterPrefix'),'-pip')]",
+        "lbpipName": "[concat(variables('clusterPrefix'),'-lbpip')]",
+        "nicName": "[concat(variables('clusterPrefix'),'-nic')]",
+        "lbName": "[concat(variables('clusterPrefix'),'-lb')]",
+        "storageAccName": "[concat(variables('clusterPrefix'),'sa',variables('suffix'))]",
+        "vmName": "[concat(variables('clusterPrefix'),'-vm')]",
+        "vmStorageAccountContainerName": "[concat(variables('clusterPrefix'),'cont',variables('suffix'))]",
+        "storageAccountType": "Standard_LRS",
+        "vnetName": "[concat(variables('clusterPrefix'),'-vnet')]",
+        "networkSecurityGroupName": "[concat(variables('clusterPrefix'),'-nsg')]",
+        "subnetRef": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')),'/subnets/',variables('subnet1Name'))]",
+        "loadBalancerBkpoolRef": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('lbName')),'/backendAddressPools/LBBAP')]",
+        "vnetAddressPrefix": "10.7.0.0/16",
+        "subnet1Name": "subnet1",
+        "subnet1Prefix": "10.7.0.0/24",
+        "vmSize": "Standard_D1_v2",
+        "imagePublisher": "CoreOS",
+        "imageOffer": "CoreOS",
+        "imageSKU": "Stable",
+        "imageVersion": "latest",
+        "baseUrl": "https://aztdrepo.blob.core.windows.net/coreos",
+        "avsetDeployUrl": "[concat(variables('baseUrl'),'/nested/availability-set.json')]",
+        "publicipDeployUrl": "[concat(variables('baseUrl'),'/nested/public-ip.json')]",
+        "storageDeployUrl": "[concat(variables('baseUrl'),'/nested/storage.json')]",
+        "nicwithloadbalncerDeployUrl": "[concat(variables('baseUrl'),'/nested/nic-with-loadbalancer.json')]",
+        "vnetsubnetDeployUrl": "[concat(variables('baseUrl'),'/nested/vnet-subnet.json')]",
+        "vmDeployUrl": "[concat(variables('baseUrl'),'/nested/corewidoutdisc.json')]",
+        "lbDeployUrl": "[concat(variables('baseUrl'),'/nested/loadbalancer.json')]",
+        "networkSecurityGroupUrl": "[concat(variables('baseUrl'),'/nested/nsg.json')]"
+    },
+    "resources": [
+        {
+            "name": "avsetDeploy",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('avsetDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "availabilitySetName": {
+                        "value": "[variables('avsetName')]"
+                    },
+                    "availabilitySetApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat('publicipDeploy',copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "copy": {
+                "name": "piploop",
+                "count": "[parameters('nodeCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicipDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[concat(variables('pipName'),copyIndex())]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[concat(variables('publicIPdnsPrefix'),copyIndex())]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "lbpublcip",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicipDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('lbpipName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[variables('lbpublicIPdnsPrefix')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "storageDeploy",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('storageDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "storageApiVersion": {
+                        "value": "[variables('StorageApiVersion')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccountType')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "vnetsubnetDeploy",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('vnetsubnetDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "vnetName": {
+                        "value": "[variables('vnetName')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressPrefix')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('subnet1Name')]"
+                    },
+                    "subnet1Prefix": {
+                        "value": "[variables('subnet1Prefix')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-02-01",
+            "name": "networkSecurityGroupDeploy",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('networkSecurityGroupUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('networkSecurityGroupName')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "lbDeploy",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "lbpublcip"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('lbDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "loadBalancerName": {
+                        "value": "[variables('lbName')]"
+                    },
+                    "loadBalancersApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('lbpipName')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat('nicwithloadbalncerDeploy',copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "vnetsubnetDeploy",
+                "lbDeploy"
+            ],
+            "copy": {
+                "name": "nicloop",
+                "count": "[parameters('nodeCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nicwithloadbalncerDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[concat(variables('nicName'),copyIndex())]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "loadBalancerBkpoolRef": {
+                        "value": "[variables('loadBalancerBkpoolRef')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnetRef')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[concat(variables('pipName'),copyIndex())]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat('vmDeploy',copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "storageDeploy",
+                "[concat('nicwithloadbalncerDeploy',copyIndex())]"
+            ],
+            "copy": {
+                "name": "vmloop",
+                "count": "[parameters('nodeCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('vmDeployUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "computeApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "vmName": {
+                        "value": "[concat(variables('vmName'),copyIndex())]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('vmSize')]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "vmStorageAccountContainerName": {
+                        "value": "[variables('vmStorageAccountContainerName')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[concat(variables('nicName'),copyIndex())]"
+                    },
+                    "availabilitySetName": {
+                        "value": "[variables('avsetName')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername":{
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        },
+        "adminPassword":{
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        },
+        "coreosvm0pip":{
+            "type": "string",
+            "value": "[concat(reference('publicipDeploy0').outputs.fqdn.value)]"
+        },
+        "coreosvm1pip":{
+            "type": "string",
+            "value": "[concat(reference('publicipDeploy1').outputs.fqdn.value)]"
+        },
+        "coreosvm2pip":{
+            "type": "string",
+            "value": "[concat(reference('publicipDeploy2').outputs.fqdn.value)]"
+        }
+    }
+    
+}   

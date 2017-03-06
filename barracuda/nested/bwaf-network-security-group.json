@@ -1,0 +1,126 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "West US",
+      "allowedValues": [
+        "Brazil South",
+        "East Asia",
+        "East US",
+        "Japan East",
+        "Japan West",
+        "North Central US",
+        "North Europe",
+        "South Central US",
+        "West Europe",
+        "West US",
+        "Southeast Asia",
+        "Central US",
+        "East US 2"
+      ],
+      "metadata": {
+        "description": "Network Security Group Deployment Location"
+      }
+    },
+    "networkApiVersion": {
+      "type": "string",
+      "defaultValue": "2015-06-15",
+      "allowedValues": [
+        "2015-05-01-preview",
+        "2015-06-15",
+        "2016-03-30"
+      ],
+      "metadata": {
+        "description": "API Version for the Network Resources"
+      }
+    },
+    "networkSecurityGroupName": {
+      "type": "string",
+      "defaultValue": "bwaf-networkSecurityGroup",
+      "metadata": {
+        "description": "Network Security Group Name"
+      }
+    },
+    "tag": {
+      "type": "object",
+      "defaultValue": {
+        "key1": "key",
+        "value1": "value"
+      },
+      "metadata": {
+        "description": "Tag Values"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "comments": "Network Security Group Resource",
+      "apiVersion": "[parameters('networkApiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('networkSecurityGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "[parameters('tag').key1]": "[parameters('tag').value1]"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ssh",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "http",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "8000",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "https",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1030,
+              "direction": "Inbound"
+            }
+          },
+        {
+            "name": "badstorehttp",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1040,
+              "direction": "Inbound"
+            }
+          },
+        ]
+      }
+    }
+  ]
+}

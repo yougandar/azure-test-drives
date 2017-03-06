@@ -1,0 +1,184 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "tag": {
+            "type": "object",
+            "defaultValue": {
+                "key1": "Component",
+                "value1": "F5cloudtry"
+            },
+            "metadata": {
+                "description": "Custom Tag Values"
+            }
+        },
+        "sessionId": {
+            "type": "string",
+            "defaultValue":"eebcf92a-754b-43b2-84c7-067ed0915083",
+            "metadata": {
+                "type": "sessionid",
+                "description": "Unique session id."
+            }
+        }
+    },
+    "variables": {
+        "jobId": "[parameters('sessionId')]",
+        "location": "South Central US",
+        "credentialName": "sql-creds",
+        "credentialName2": "azurecreds",
+        "accountName": "[concat('f5cloudtry-', parameters('sessionId'))]",
+        "username": "xuser",
+        "password": "F5testnet",
+        "eusername": "azureuser",
+        "epassword": "F5cloudtry",
+        "username2": "xuser@f5cloudtry.onmicrosoft.com",
+        "runbookName": "f5cloudtry-deploy",
+        "variableName": "dnsprefix",
+        "baseURL": "https://f5cloudtrystor.blob.core.windows.net/scripts/",
+        "scriptUri": "[concat(variables('baseURL'),'f5cloudtry-deploy.ps1')]",
+        "templatelink": "[concat(variables('baseURL'),'nestedtemplatedeploy.json')]",
+        "runbookDescription": "fully deploys cloudtry environment via azuredeploy.json",
+        "actID": "[resourceId('Microsoft.Automation/automationAccounts',concat(variables('accountName'), '-', parameters('sessionId')))]",
+        "sku": "Free"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "name": "[variables('accountName')]",
+            "apiVersion": "2015-01-01-preview",
+            "location": "[variables('location')]",
+            "tags": "[parameters('tag')]",
+            "properties": {
+                "sku": {
+                    "name": "[variables('sku')]"
+                }
+            },
+            "resources": [
+                {
+                    "name": "[variables('runbookName')]",
+                    "type": "runbooks",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[variables('location')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "tags": "[parameters('tag')]",
+                    "properties": {
+                        "runbookType": "Script",
+                        "logProgress": "false",
+                        "logVerbose": "false",
+                        "description": "[variables('runbookDescription')]",
+                        "publishContentLink": {
+                            "uri": "[variables('scriptUri')]",
+                            "version": "1.0.0.0"
+                        }
+                    }
+                },
+                {
+                    "name": "[variables('credentialName')]",
+                    "type": "credentials",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[variables('location')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "tags": "[parameters('tag')]",
+                    "properties": {
+                        "userName": "[variables('userName')]",
+                        "password": "[variables('password')]"
+                    }
+                },
+                {
+                    "name": "[variables('credentialName2')]",
+                    "type": "credentials",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[variables('location')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "tags": "[parameters('tag')]",
+                    "properties": {
+                        "userName": "[variables('userName2')]",
+                        "password": "[variables('password')]"
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName'), '/', variables('variableName'))]",
+                    "type": "Microsoft.Automation/automationAccounts/variables",
+                    "apiVersion": "2015-10-31",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "properties": {
+                        "variable": {
+                            "name": "[variables('variableName')]",
+                            "type": "string",
+                            "value": "",
+                            "Encrypted": false
+                        }
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName'), '/', variables('jobId'))]",
+                    "type": "Microsoft.Automation/automationAccounts/jobs",
+                    "apiVersion": "2015-10-31",
+                    "location": "[variables('location')]",
+                    "tags": "[parameters('tag')]",
+                    "properties": {
+                        "runbook": {
+                            "name": "[variables('runbookName')]"
+                        },
+                        "parameters": {
+                            "variableName": "[variables('variableName')]",
+                            "myprefix": "placeholder",
+                            "mykey": "placeholder"
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/variables', variables('accountName'), variables('variableName'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', variables('accountName'), variables('runbookName'))]"
+                    ]
+                },
+                {
+                    "name": "variableOutputNestedTemplate",
+                    "apiVersion": "2015-01-01",
+                    "type": "Microsoft.Resources/deployments",
+                    "properties": {
+                        "mode": "incremental",
+                        "templatelink": {
+                            "uri": "[variables('templatelink')]",
+                            "contentVersion": "1.0"
+                        },
+                        "parameters": {
+                            "accountName": {
+                                "value": "[variables('accountName')]"
+                            },
+                            "variableName": {
+                                "value": "[variables('variableName')]"
+                            }
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/jobs', variables('accountName'), variables('jobId'))]"
+                    ]
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "login details": {
+            "type": "string",
+            "value": "[reference('variableOutputNestedTemplate').outputs.exampleOutput.value]"
+        },
+        "user id": {
+            "type": "string",
+            "value": "[variables('eusername')]"
+        },
+        "password": {
+            "type": "string",
+            "value": "[variables('epassword')]"
+        }
+    }
+}

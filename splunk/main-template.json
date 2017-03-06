@@ -1,0 +1,650 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmAdminUsername": {
+            "type": "string",
+            "defaultValue": "splunkuser",
+            "metadata": {
+                "description": "vm Admin Username of Virtual Machine to SSH or RDP"
+            }
+        },
+        "vmAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "Sysga1n4205!",
+            "metadata": {
+                "description": "vm Admin Password of Virtual Machine to SSH or RDP"
+            }
+        },
+        "clientAdminUsername": {
+            "type": "string",
+            "defaultValue": "clientuser",
+            "metadata": {
+                "description": "vm Admin Username of Virtual Machine to SSH or RDP"
+            }
+        },
+        "clientAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "Sysga1n4205!",
+            "metadata": {
+                "description": "vm Admin Password of Virtual Machine to SSH or RDP"
+            }
+        },
+        "clientVmName": {
+            "type": "string",
+            "defaultValue": "clientvm",
+            "metaData": {
+                "description": "Single Node Virtual Machine name"
+            }
+        },
+        "splunkvmName": {
+            "type": "string",
+            "defaultValue": "splunkvm",
+            "metaData": {
+                "description": "Single Node Virtual Machine name"
+            }
+        },
+        "splunkAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "Sysga1n4205!",
+            "metaData": {
+                "description": "splunk admin password"
+            }
+        },
+        "sshFrom": {
+            "type": "string",
+            "defaultValue": "0.0.0.0/0",
+            "metadata": {
+                "description": "CIDR block from which SSH access is allowed (default is ssh access from anywhere)"
+            }
+        },
+        "forwardedDataFrom": {
+            "type": "string",
+            "defaultValue": "0.0.0.0/0",
+            "metadata": {
+                "description": "CIDR block from which forwarded data is allowed (default is data can be received from anywhere)"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "eastus",
+            "allowedValues": [
+                "Brazil South",
+                "brazilsouth",
+                "East Asia",
+                "eastasia",
+                "East US",
+                "eastus",
+                "Japan East",
+                "japaneast",
+                "Japan West",
+                "japanwest",
+                "North Central US",
+                "northcentralus",
+                "North Europe",
+                "northeurope",
+                "South Central US",
+                "southcentralus",
+                "West Europe",
+                "westeurope",
+                "West US",
+                "westus",
+                "Southeast Asia",
+                "southeastasia",
+                "Central US",
+                "centralus",
+                "East US 2",
+                "eastus2"
+            ],
+            "metadata": {
+                "description": "Deployment Location"
+            }
+        },
+        "tag": {
+            "type": "object",
+            "defaultValue": {
+                "value1": "splunk"
+            }
+        }
+    },
+    "variables": {
+        "armBaseUrl": "https://aztdrepo.blob.core.windows.net/splunk",
+        "prefix": "[uniqueString(resourceGroup().id)]",
+        "uid": "[substring(variables('prefix') ,0 ,5)]",
+        "publicIPAddressName": "splunk-PublicIP",
+        "virtualNetworkName": "splunk-vnet",
+        "networkSecurityGroupName": "[concat('splunk-nsg',variables('uid'))]",
+        "networkInterfacesName": "[concat('splunk-nic',variables('uid'))]",
+        "storageAccType": "Standard_LRS",
+        "computeApiVersion": "2015-06-15",
+        "networkApiVersion": "2015-06-15",
+        "storageApiVersion": "2015-06-15",
+        "vnetAddressPrefix": "10.2.0.0/16",
+        "storageAccName": "[concat('straccnt',variables('uid'))]",
+        "publicIPdnsPrefix": "[concat('splunkdns',variables('uid'))]",
+        "subnet1Name": "sh-idxsubnet",
+        "subnet2Name": "clvm-subnet",
+        "subnet1Prefix": "10.2.0.0/24",
+        "subnet2Prefix": "10.2.1.0/24",
+        "subnet-id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName')), '/subnets/',variables('subnet1Name'))]",
+        "splunkvmSize": "Standard_DS3_v2",
+        "clientVmSize": "Standard_DS1",
+        "clientPublicIPAddressName": "client-PublicIP",
+        "clientPublicIPdnsPrefix": "[concat('clientdns',variables('uid'))]",
+        "clientNetworkInterfacesName": "[concat('client-nic',variables('uid'))]",
+        "clientNetworkSecurityGroupName": "[concat('client-nsg',variables('uid'))]",
+        "subnet-id1": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName')), '/subnets/',variables('subnet2Name'))]",
+        "vmStorageAccountContainerName": "vhds",
+        "imagePublisher": "splunk",
+        "imageOffer": "splunk-enterprise-base-image",
+        "imageSKU": "splunk-on-ubuntu-14-04-lts",
+        "imageVersion": "1.0.9",
+        "imagePublisher1": "RedHat",
+        "imageOffer1": "RHEL",
+        "imageSKU1": "7.2",
+        "imageVersion1": "latest",
+        "privateIPAddress": "10.2.0.4",
+        "typeHandlerVersion": "1.5",
+        "singleQuote": "'",
+        "pass": "[concat(variables('singleQuote'), parameters('splunkAdminPassword'), variables('singleQuote'))]",
+        "splunkServerRole": "splunk_server",
+        "storageAccountResourceUrl": "[concat(variables('armBaseUrl'),'/nested/storage.json')]",
+        "publicIPResourceUrl": "[concat(variables('armBaseUrl'),'/nested/public-ip.json')]",
+        "networkSecurityGroupResourceUrl": "[concat(variables('armBaseUrl'),'/nested/splunknsg.json')]",
+        "virtualNetworkResourceUrl": "[concat(variables('armBaseUrl'),'/nested/vnet-2subnets.json')]",
+        "networkInterfacesResourceUrl": "[concat(variables('armBaseUrl'),'/nested/nic-static-private-ip.json')]",
+        "customScriptsUrlPrefix": "[concat(variables('armBaseUrl'),'/scripts')]",
+        "virtualMachineResourceUrl": "[concat(variables('armBaseUrl'),'/nested/vm-plan-2disks.json')]",
+        "VMExtensionsResourceUrl": "[concat(variables('armBaseUrl'),'/nested/extension-array.json')]",
+        "clientvirtualMachineResourceUrl": "[concat(variables('armBaseUrl'),'/nested/virtual-machine.json?')]",
+        "clientNetworkSecurityGroupResourceUrl": "[concat(variables('armBaseUrl'),'/nested/client-nsg.json')]",
+        "clientNetworkInterfacesResourceUrl": "[concat(variables('armBaseUrl'),'/nested/network-interface.json')]"
+    },
+    "resources": [
+        {
+            "name": "storageAccountResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('storageAccountResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccType')]"
+                    },
+                    "storageApiVersion": {
+                        "value": "[variables('storageApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "storageAccount",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "splunkPublicIPResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicIPResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[variables('publicIPdnsPrefix')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "publicIP",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "clientPublicIPResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicIPResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('clientPublicIPAddressName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[variables('clientPublicIPdnsPrefix')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "publicIP",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "splunkNetworkSecurityGroupResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('networkSecurityGroupResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('networkSecurityGroupName')]"
+                    },
+                    "sshFrom": {
+                        "value": "[parameters('sshFrom')]"
+                    },
+                    "forwardedDataFrom": {
+                        "value": "[parameters('forwardedDataFrom')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "networkSecurityGroup",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "clientNetworkSecurityGroupResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('clientNetworkSecurityGroupResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('clientNetworkSecurityGroupName')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "networkSecurityGroup",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "virtualNetworkResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualNetworkResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vnetName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressPrefix')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('subnet1Name')]"
+                    },
+                    "subnet1Prefix": {
+                        "value": "[variables('subnet1Prefix')]"
+                    },
+                    "subnet2Name": {
+                        "value": "[variables('subnet2Name')]"
+                    },
+                    "subnet2Prefix": {
+                        "value": "[variables('subnet2prefix')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "virtualNetwork",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "splunkNetworkInterfacesResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "splunkPublicIPResource",
+                "splunkNetworkSecurityGroupResource",
+                "virtualNetworkResource"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('networkInterfacesResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('networkInterfacesName')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('networkSecurityGroupName')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnet-id')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "privateIPAddress": {
+                        "value": "[variables('privateIPAddress')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "networkInterfaces",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "clientNetworkInterfacesResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "clientPublicIPResource",
+                "clientNetworkSecurityGroupResource",
+                "virtualNetworkResource"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('clientNetworkInterfacesResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('clientNetworkInterfacesName')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('clientNetworkSecurityGroupName')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('clientPublicIPAddressName')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnet-id1')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "networkInterfaces",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "splunkVirtualMachineResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "storageAccountResource",
+                "splunkNetworkInterfacesResource"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualMachineResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vmName": {
+                        "value": "[parameters('splunkvmName')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('splunkvmSize')]"
+                    },
+                    "vmStorageAccountContainerName": {
+                        "value": "[variables('vmStorageAccountContainerName')]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('vmAdminUsername')]"
+                    },
+                    "adminPasswordOrSshKey": {
+                        "value": "[parameters('vmAdminPassword')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('networkInterfacesName')]"
+                    },
+                    "computeApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "virtualmachine",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "clientVirtualMachineResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "storageAccountResource",
+                "clientNetworkInterfacesResource"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('clientVirtualMachineResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vmName": {
+                        "value": "[parameters('clientVmName')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('clientvmSize')]"
+                    },
+                    "vmStorageAccountContainerName": {
+                        "value": "[variables('vmStorageAccountContainerName')]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('clientAdminUsername')]"
+                    },
+                    "adminPasswordOrSshKey": {
+                        "value": "[parameters('clientAdminPassword')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher1')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer1')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU1')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion1')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('clientNetworkInterfacesName')]"
+                    },
+                    "computeApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "virtualmachine",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "splunkVMExtensionsResource",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "splunkVirtualMachineResource"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('VMExtensionsResourceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vmName": {
+                        "value": "[parameters('splunkvmName')]"
+                    },
+                    "typeHandlerVersion": {
+                        "value": "[variables('typeHandlerVersion')]"
+                    },
+                    "computeApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "customScriptsUrl": {
+                        "value": [
+                            "[concat(variables('customScriptsUrlPrefix'),'/node-setup.sh')]",
+                            "[concat(variables('customScriptsUrlPrefix'),'/vm-disk-utils-0.1.sh')]"
+                        ]
+                    },
+                    "commandToExecute": {
+                        "value": "[concat('bash node-setup.sh', ' -r ', variables('splunkServerRole'), ' -p ', variables('pass'))]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "VMExtensions",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "splunk URL": {
+            "value": "[concat(variables('publicIPdnsPrefix'), '.', tolower(replace(parameters('location'),' ','')), '.cloudapp.azure.com')]",
+            "type": "string"
+        },
+        "splunk password": {
+            "value": "[parameters('splunkAdminPassword')]",
+            "type": "string"
+        },
+        "client ssh": {
+            "value": "[concat(variables('clientPublicIPdnsPrefix'), '.', tolower(replace(parameters('location'),' ','')), '.cloudapp.azure.com')]",
+            "type": "string"
+        },
+        "client vmUserName": {
+            "value": "[parameters('clientAdminUserName')]",
+            "type": "string"
+        },
+        "client vmPassword": {
+            "value": "[parameters('clientAdminPassword')]",
+            "type": "string"
+        }
+    }
+}

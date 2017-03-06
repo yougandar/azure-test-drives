@@ -1,0 +1,36 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "westus"
+        },
+        "computeApiVersion": {
+            "value": "2015-06-15"
+        },
+        "tag": {
+            "value": {
+                "key1": "key",
+                "value1": "value"
+            }
+        },
+        "vmName": {
+            "value": "vmName"
+        },
+        "vmExtensionName": {
+            "value": "vmExtensionName"
+        },
+        "typeHandlerVersion": {
+            "value": "1.5"
+        },
+        "customScriptsUrl": {
+            "value": [
+                "http://abc.xyz.com",
+                "http://github.com"
+            ]
+        },
+        "commandToExecute": {
+            "value": "commandToExecute"
+        }
+    }
+}

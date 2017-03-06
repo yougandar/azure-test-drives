@@ -1,0 +1,24 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "storageAccountName": {
+      "value": "GEN-UNIQUE"
+    },
+    "storageApiVersion": {
+      "value": "2015-06-15"
+    },
+    "location": {
+      "value": "West US"
+    },
+    "tag": {
+      "value": {
+        "key1": "key",
+        "value1": "value"
+      }
+    },
+    "storageAccountType": {
+      "value": "Standard_LRS"
+    }
+  }
+}

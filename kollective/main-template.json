@@ -1,0 +1,412 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "kuser-root",
+            "metadata": {
+                "description": "The name of the administrator of the new VMs."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "TestDriveUser123",
+            "metadata": {
+                "description": "The password must contain one uppercase, one lowercase and numericals, lenght must be 8-12."
+            }
+        },
+        
+        "location": {
+            "type": "string",
+            "defaultValue": "westus",
+            "allowedValues": [
+                "Brazil South",
+                "brazilsouth",
+                "East Asia",
+                "eastasia",
+                "East US",
+                "eastus",
+                "Japan East",
+                "japaneast",
+                "Japan West",
+                "japanwest",
+                "North Central US",
+                "northcentralus",
+                "North Europe",
+                "northeurope",
+                "South Central US",
+                "southcentralus",
+                "West Europe",
+                "westeurope",
+                "West US",
+                "westus",
+                "Southeast Asia",
+                "southeastasia",
+                "Central US",
+                "centralus",
+                "East US 2",
+                "eastus2"
+            ],
+            "metadata": {
+                "description": "Deployment Location"
+            }
+        },
+        "tag": {
+            "type": "object",
+            "defaultValue": {
+                "value1": "Kollective"
+            },
+            "metadata": {
+                "description": "Custom Tag Values"
+            }
+        }
+    },
+    "variables": {
+        "nodeCount":3,
+        "clusterNamePrefix":"Testflight",
+        "prefix":"koll",
+        "suffix": "[substring(uniqueString('resourceGroup().id'), 0, 7)]",
+        "baseUrl": "https://aztdrepo.blob.core.windows.net/kollective/nested",
+        "nicNamePrefix": "[concat(variables('prefix'),'-nic')]",
+        "storageAccountName": "[concat(variables('prefix'),'sa')]",
+        "dnsNameForPublicIP": "[variables('prefix')]",
+        "vnetName": "[concat(variables('prefix'),'-vnet')]",
+        "availabilitySetName": "[concat(variables('prefix'),'-avset')]",
+        "loadBalancerName": "[concat(variables('prefix'),'-lb')]",
+        "publicIPAddressName": "[concat(variables('prefix'),'-pip')]",
+        "dnsName": "[concat(variables('dnsNameForPublicIP'),variables('suffix'))]",
+        "storageAccName": "[concat(variables('storageAccountName'),variables('suffix'))]",
+        "vmSize": "Standard_D2",
+        "imagePublisher": "kollective",
+        "imageOffer": "sd-ecdn-test-flight-vm",
+        "imageSKU": "kollectiveecdntestflight",
+        "imageVersion": "latest",
+        "subnetName": "subnet1",
+        "vnetAddressRange": "10.0.0.0/16",
+        "subnetAddressRange": "10.0.0.0/24",
+        "storageAccType": "Standard_LRS",
+        "availabilitySetsApiVersion": "2016-03-30",
+        "loadBalancersApiVersion": "2016-06-01",
+        "networkApiVersion": "2016-06-01",
+        "storageApiVersion": "2015-06-15",
+        "virtualMachines-api-version": "2016-03-30",
+        "storageAccountSetupURL": "[concat(variables('baseUrl'),'/storage.json')]",
+        "availabilitySetSetupURL": "[concat(variables('baseUrl'),'/availability-set.json')]",
+        "virtualNetworkSetupURL": "[concat(variables('baseUrl'),'/vnet-subnet.json')]",
+        "publicIpSetupURL": "[concat(variables('baseUrl'),'/public-ip.json')]",
+        "loadBalancerSetupURL": "[concat(variables('baseUrl'),'/koll-loadbalancer.json')]",
+        "networkInterfaceSetupURL": "[concat(variables('baseUrl'),'/nic-with-loadbalancer.json')]",
+        "virtualMachineSetupURL": "[concat(variables('baseUrl'),'/vm-withavset.json')]",
+        "loadBalancerInboundNatRef": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')),'/inboundNatRules/RDP-VM')]",
+        "subnetRef": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')),'/subnets/',variables('subnetName'))]",
+        "loadBalancerBkpoolRef": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')),'/backendAddressPools/LBBAP')]"
+    },
+    "resources": [
+        {
+            "name": "storageAccountSetup",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('storageAccountSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccType')]"
+                    },
+                    "storageApiVersion": {
+                        "value": "[variables('storageApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Storage Account",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "availabilitySetSetup",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('availabilitySetSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "availabilitySetName": {
+                        "value": "[variables('availabilitySetName')]"
+                    },
+                    "availabilitySetApiVersion": {
+                        "value": "[variables('availabilitySetsApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Availability Set",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "virtualNetworkSetup",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualNetworkSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vnetName": {
+                        "value": "[variables('vnetName')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('subnetName')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressRange')]"
+                    },
+                    "subnet1Prefix": {
+                        "value": "[variables('subnetAddressRange')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Virtual Network",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "publicIPSetup",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicIpSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[variables('dnsName')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Public IP Address",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "loadBalancerSetup",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "publicIPSetup"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('loadBalancerSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "loadBalancerName": {
+                        "value": "[variables('loadBalancerName')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "loadBalancersApiVersion": {
+                        "value": "[variables('loadBalancersApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Load Balancer",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    },
+                    "nodeCount": {
+                        "value": "[variables('nodeCount')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat('networkInterfaceSetup',copyIndex())]",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "virtualNetworkSetup",
+                "loadBalancerSetup"
+            ],
+            "copy": {
+                "name": "networkInterfaceLoop",
+                "count": "[variables('nodeCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('networkInterfaceSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "loadBalancerInboundNatRef": {
+                        "value": "[concat(variables('loadBalancerInboundNatRef'),copyIndex())]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[concat(variables('nicNamePrefix'),copyIndex())]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnetRef')]"
+                    },
+                    "loadBalancerBkpoolRef": {
+                        "value": "[variables('loadBalancerBkpoolRef')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Network Interface Card",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat('virtualMachineSetup',copyIndex())]",
+            "apiVersion": "2016-02-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "storageAccountSetup",
+                "[concat('networkInterfaceSetup',copyIndex())]",
+                "availabilitySetSetup"
+            ],
+            "copy": {
+                "name": "virtualMachineLoop",
+                "count": "[variables('nodeCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualMachineSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "vmName": {
+                        "value": "[concat(variables('clusterNamePrefix'),'-VM',copyIndex())]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('vmSize')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion')]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "availabilitySetName": {
+                        "value": "[variables('availabilitySetName')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[concat(variables('nicNamePrefix'),copyIndex())]"
+                    },
+                    "computeApiVersion": {
+                        "value": "[variables('virtualMachines-api-version')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Virtual Machine",
+                            "value1": "[parameters('tag').value1]"
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "Username": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        },
+        "Password": {
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        },
+        "VM1_RDP_ADDRESS":{
+            "type": "string",
+            "value": "[concat(reference('publicIPSetup').outputs.fqdn.value,':50001')]"
+        },
+        "VM2_RDP_ADDRESS":{
+            "type": "string",
+            "value": "[concat(reference('publicIPSetup').outputs.fqdn.value,':50002')]"
+        },
+        "VM3_RDP_ADDRESS":{
+            "type": "string",
+            "value": "[concat(reference('publicIPSetup').outputs.fqdn.value,':50003')]"
+        }
+    }
+}

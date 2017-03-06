@@ -1,0 +1,51 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "westus"
+        },
+        "computeApiVersion": {
+            "value": "2015-06-15"
+        },
+        "tag": {
+            "value": {
+                "key1": "key",
+                "value1": "value"
+            }
+        },
+        "vmName": {
+            "value": "vmName"
+        },
+        "vmSize": {
+            "value": "Standard_D2"
+        },
+        "adminUsername": {
+            "value": "sysgain"
+        },
+        "adminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "imagePublisher": {
+            "value": "Canonical"
+        },
+        "imageOffer": {
+            "value": "UbuntuServer"
+        },
+        "imageSKU": {
+            "value": "14.04.2-LTS"
+        },
+        "imageVersion": {
+            "value": "latest"
+        },
+        "storageAccountName": {
+            "value": "GEN-UNIQUE"
+        },
+        "vmStorageAccountContainerName": {
+            "value": "vhds"
+        },
+        "networkInterfaceName": {
+            "value": "networkInterfaceName"
+        }
+    }
+}

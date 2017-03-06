@@ -1,0 +1,211 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": { "type": "string" },
+        "dnsName": { "type": "string" },
+        "vmNamePrefix": { "type": "string" },
+        "lbPublicIPName": { "type": "string" },
+        "dbSubnetRef": { "type": "string" }
+    },
+    "variables": {
+        "apiVer": "2015-06-15",
+        "lbPublicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('lbPublicIPName'))]",
+        "lbName": "[concat(parameters('vmNamePrefix'),'-lb')]",
+        "lbID": "[resourceId('Microsoft.Network/loadBalancers',variables('lbName'))]",
+
+        "ilbName": "[concat(parameters('vmNamePrefix'),'-ilb')]",
+        "ilbID": "[resourceId('Microsoft.Network/loadBalancers',variables('ilbName'))]",
+        "ilbPrivateIPAddress": "10.0.1.10",
+        "ilbBackendAddressPoolName": "[concat(parameters('vmNamePrefix'), '-ilbBackendPool')]",
+        "ilbBackendAddressPoolID": "[concat(variables('ilbID'),'/backendAddressPools/', variables('ilbBackendAddressPoolName'))]",
+        "ilbIPConfigName": "[concat(parameters('vmNamePrefix'), '-ilbIPCfg')]",
+        "ilbIPConfig": "[concat(variables('ilbID'),'/frontendIPConfigurations/InternalLoadBalancerFrontend')]",
+
+        "sshIPConfigName": "[concat(parameters('vmNamePrefix'), '-sshIPCfg')]",
+        "sshIPConfig": "[concat(variables('lbID'),'/frontendIPConfigurations/',variables('sshIPConfigName'))]",
+
+        "probeName": "[concat(parameters('vmNamePrefix'), '-probe')]",
+        "probeID": "[concat(variables('ilbID'),'/probes/',variables('probeName'))]",
+        "probePort": "9200"
+    },
+    "resources": [
+        {
+            "apiVersion": "[variables('apiVer')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[parameters('lbPublicIPName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('dnsName')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVer')]",
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('lbName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', parameters('lbPublicIPName'))]"
+                ],
+            "properties": {
+                "frontendIPConfigurations": [
+                {
+                    "name": "[variables('sshIPConfigName')]",
+                    "properties": {
+                        "publicIPAddress": {
+                            "id": "[variables('lbPublicIPRef')]"
+                        }
+                    }
+                }
+                ],
+                    "inboundNatRules": [
+                    {
+                        "name": "[concat(parameters('vmNamePrefix'), '-natRule-max1')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('sshIPConfig')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 2201,
+                            "backendPort": 22,
+                            "enableFloatingIP": false
+                        }
+                    },
+                    {
+                        "name": "[concat(parameters('vmNamePrefix'), '-natRule-max2')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('sshIPConfig')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 2202,
+                            "backendPort": 22,
+                            "enableFloatingIP": false
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('ilbName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "frontendIPConfigurations": [
+                {
+                    "name": "InternalLoadBalancerFrontend",
+                    "properties": {
+                        "subnet": {
+                            "id": "[parameters('dbSubnetRef')]"
+                        },
+                        "privateIPAddress": "[variables('ilbPrivateIPAddress')]",
+                        "privateIPAllocationMethod": "Static"
+                    }
+                }
+                ],
+                    "backendAddressPools": [
+                    {
+                        "name": "[variables('ilbBackendAddressPoolName')]"
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "[concat(parameters('vmNamePrefix'),'-ilbRule-4006')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('ilbIPConfig')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('ilbBackendAddressPoolID')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 4006,
+                            "backendPort": 4006,
+                            "enableFloatingIP": false,
+                            "loadDistribution": "SourceIP",
+                            "idleTimeoutInMinutes": 10,
+                            "probe": {
+                                "id": "[variables('probeID')]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[concat(parameters('vmNamePrefix'),'-ilbRule-4007')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('ilbIPConfig')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('ilbBackendAddressPoolID')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 4007,
+                            "backendPort": 4007,
+                            "enableFloatingIP": false,
+                            "loadDistribution": "SourceIP",
+                            "idleTimeoutInMinutes": 10,
+                            "probe": {
+                                "id": "[variables('probeID')]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[concat(parameters('vmNamePrefix'),'-ilbRule-4008')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('ilbIPConfig')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('ilbBackendAddressPoolID')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 4008,
+                            "backendPort": 4008,
+                            "enableFloatingIP": false,
+                            "loadDistribution": "SourceIP",
+                            "idleTimeoutInMinutes": 10,
+                            "probe": {
+                                "id": "[variables('probeID')]"
+                            }
+                        }
+                    }
+                ],
+                    "probes": [
+                    {
+                        "name": "[variables('probeName')]",
+                        "properties": {
+                            "protocol": "Http",
+                            "port": "[variables('probePort')]",
+                            "requestPath": "/",
+                            "intervalInSeconds": 5,
+                            "numberOfProbes": 4
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "lbID": {
+            "value": "[variables('lbID')]",
+            "type": "string"
+        },
+        "lbBackendAddressPoolID": {
+            "value": "[variables('ilbBackendAddressPoolID')]",
+            "type": "string"
+        },
+        "publicIpId": {
+          "value": "[variables('lbPublicIPRef')]",
+          "type": "string"
+        },
+        "fqdn": {
+          "value": "[reference(variables('lbPublicIPRef')).dnsSettings.fqdn]",
+          "type": "string"
+        }
+
+    }
+}

@@ -1,0 +1,20 @@
+filebeat:
+  prospectors:
+  
+    -
+      paths:
+        - /var/log/auth.log
+        - /var/log/syslog
+        
+      input_type: log  
+      document_type: syslog
+      registry_file: /var/lib/filebeat/registry
+      
+      
+        
+output:
+  elasticsearch:
+    hosts: ["http://10.0.0.4:9200"]
+    protocol: "http"
+    username: "elastic"
+    password: "esadmin@123"
