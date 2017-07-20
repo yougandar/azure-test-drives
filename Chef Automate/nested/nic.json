@@ -1,0 +1,65 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "networkSettings": {
+            "type": "object"
+        },
+        "subnetRef":{
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('networkSettings').wsNic]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[parameters('networkSettings').networkApiVersion]",
+            "location": "[parameters('networkSettings').location]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', parameters('networkSettings').wsPip)]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSettings').wsNsg)]"
+                }
+            }
+        },
+         {
+            "name": "[parameters('networkSettings').chefAutoNic]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[parameters('networkSettings').networkApiVersion]",
+            "location": "[parameters('networkSettings').location]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', parameters('networkSettings').chefAutoPip)]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSettings').chefautoNsg)]"
+                }
+            }
+        }
+    ]
+}

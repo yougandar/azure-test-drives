@@ -1,0 +1,162 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "computeSettings": {
+            "type": "secureObject"
+        },
+        "chefAutomatefqdn": {
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('computeSettings').wsVmName]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "[parameters('computeSettings').computeApiVersion]",
+            "location": "[parameters('computeSettings').location]",
+           
+            "properties": {
+                "osProfile": {
+                    "computerName": "[parameters('computeSettings').wsVmName]",
+                    "adminUsername": "[parameters('computeSettings').adminUsername]",
+                    "adminPassword": "[parameters('computeSettings').adminPassword]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": true
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('computeSettings').virtualMachineSize]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "id": "[concat('/subscriptions/',parameters('computeSettings').customImageSubscription,'/resourceGroups/',parameters('computeSettings').customImageRG,'/providers/Microsoft.Compute/images/automate-test-drive-image-20170629150147')]"
+                    },
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('computeSettings').storageAccountType]"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('computeSettings').wsNic)]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('computeSettings').wsVmName,'/workstation_setup')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "location": "[parameters('computeSettings').location]",
+            "apiVersion": "2016-04-30-preview",
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.8",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[parameters('computeSettings').workstationSetupScriptUrl]"
+                    ],
+                           
+                   "commandToExecute": "[concat('powershell.exe -File ./scripts/Workstation_setup.ps1', ' ', parameters('computeSettings').adminUsername, ' ', parameters('computeSettings').adminpassword, ' ', parameters('chefAutomatefqdn'), ' ', parameters('computeSettings').orguser)]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('computeSettings').wsVmName)]",
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('computeSettings').chefAutoVmName,'/extensions/chefupgrade_setup')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('computeSettings').chefAutoVmName]",
+            "apiVersion": "[parameters('computeSettings').computeApiVersion]",
+            "location": "[parameters('computeSettings').location]",
+            "plan": {
+                "name": "[parameters('computeSettings').imageSKU]",
+                "product": "[parameters('computeSettings').imageOffer]",
+                "publisher": "[parameters('computeSettings').imagePublisher]"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('computeSettings').virtualMachineSize]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('computeSettings').chefAutoVmName]",
+                    "adminUsername": "[parameters('computeSettings').adminUsername]",
+                    "adminPassword": "[parameters('computeSettings').adminPassword]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[parameters('computeSettings').imagePublisher]",
+                        "offer": "[parameters('computeSettings').imageOffer]",
+                        "sku": "[parameters('computeSettings').imageSKU]",
+                        "version": "[parameters('computeSettings').imageVersion]"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('computeSettings').storageAccountType]"
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('computeSettings').chefAutoNic)]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('computeSettings').chefAutoVmName,'/automate_setup')]",
+            "apiVersion": "[parameters('computeSettings').computeApiVersion]",
+            "location": "[parameters('computeSettings').location]",
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[parameters('computeSettings').chefAutoScriptUrl1]"
+                    ],
+                    "commandToExecute": "[concat(parameters('computeSettings').rubyPath, ' ./automate_setup.rb --fqdn \"', parameters('chefAutomatefqdn'), '\" --license \"', parameters('computeSettings').automateLicenseUri, '\"')]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('computeSettings').chefAutoVmName)]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('computeSettings').chefAutoVmName,'/chefupgrade_setup')]",
+            "apiVersion": "[parameters('computeSettings').computeApiVersion]",
+            "location": "[parameters('computeSettings').location]",
+            "properties": {
+                "publisher": "Microsoft.OSTCExtensions",
+                "type": "CustomScriptForLinux",
+                "typeHandlerVersion": "1.5",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[parameters('computeSettings').chefAutoScriptUrl2]"
+                    ],
+                    "commandToExecute":  "[concat( 'sh chefupgrade_setup.sh',' ',parameters('computeSettings').adminUsername,' ',parameters('computeSettings').firstname,' ',parameters('computeSettings').lastname,' ',parameters('computeSettings').mailid,' ',parameters('computeSettings').adminpassword,' ',parameters('computeSettings').orguser)]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('computeSettings').chefAutoVmName)]",
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('computeSettings').chefAutoVmName,'/extensions/automate_setup')]"
+            ]
+        }
+    ]
+}
