@@ -1,0 +1,62 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"        
+        },
+        
+        
+        "nicName": {
+            "type": "string"
+            },
+        
+        "publicIpName": {
+            "type": "string"
+            },
+        "subnetRef": {
+            "type": "string"       
+        },
+        "nsgName":
+    {
+        "type": "string"
+    },
+     "subnetRef": {
+            "type": "string"
+     }
+    
+    },
+    "variables": {},
+    "resources": [
+        {  
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('nicname')]",
+            "apiVersion": "2016-03-30",
+            "location": "[parameters('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "172.16.2.4",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            }
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableIPForwarding": false,
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+                }
+            }
+        }  
+        
+    ]
+}
+
+

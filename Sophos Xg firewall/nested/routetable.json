@@ -1,0 +1,83 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "westus",
+            "allowedValues": [
+                "Brazil South",
+                "brazilsouth",
+                "East Asia",
+                "eastasia",
+                "East US",
+                "eastus",
+                "Japan East",
+                "japaneast",
+                "Japan West",
+                "japanwest",
+                "North Central US",
+                "northcentralus",
+                "North Europe",
+                "northeurope",
+                "South Central US",
+                "southcentralus",
+                "West Europe",
+                "westeurope",
+                "West US",
+                "westus",
+                "Southeast Asia",
+                "southeastasia",
+                "Central US",
+                "centralus",
+                "East US 2",
+                "eastus2"
+            ],
+            "metadata": {
+                "description": "Deployment Location Hint: Use lowercase for creating ipaddress"
+            }
+        },
+        "routeTables_xglanrt_name": {
+            "defaultValue": "xglanrt",
+            "type": "String"
+        },
+        "routeName": {
+            "defaultValue": "route_all_xgfirewall",
+            "type": "String"
+        },
+        "routeAddressPrefix": {
+            "defaultValue": "0.0.0.0/0",
+            "type": "string"
+        },
+        "routeHopType": {
+            "defaultValue": "VirtualAppliance",
+            "type": "string"
+        },
+        "routeHopIpAddress": {
+            "defaultValue": "172.18.1.4",
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "comments": "Generalized from resource: '/subscriptions/7eab3893-bd71-4690-84a5-47624df0b0e5/resourceGroups/sophos/providers/Microsoft.Network/routeTables/xglanrt'.",
+            "type": "Microsoft.Network/routeTables",
+            "name": "[parameters('routeTables_xglanrt_name')]",
+            "apiVersion": "2016-03-30",
+            "location": "[parameters('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "[parameters('routeName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('routeAddressPrefix')]",
+                            "nextHopType": "[parameters('routeHopType')]",
+                            "nextHopIpAddress": "[parameters('routeHopIpAddress')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
