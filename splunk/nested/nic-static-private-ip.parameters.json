@@ -1,0 +1,33 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "westus"
+        },
+        "networkApiVersion": {
+            "value": "2015-06-15"
+        },
+        "networkInterfaceName": {
+            "value": "networkInterface"
+        },
+        "tag": {
+            "value": {
+                "key1": "key",
+                "value1": "value"
+            }
+        },
+        "networkSecurityGroupName": {
+            "value": "networkSecurityGroup"
+        },
+        "publicIPAddressName": {
+            "value": "publicIPAddress"
+        },
+        "privateIPAddress": {
+            "value": ""
+        },
+        "subnetRef": {
+            "value": "subnetRef"
+        }
+    }
+}

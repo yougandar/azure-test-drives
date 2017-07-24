@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmAdminUsername": {
+            "value": "splunkuser"
+        },
+        "vmAdminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "clientAdminUsername": {
+            "value": "clientuser"
+        },
+        "clientAdminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "clientVmName": {
+            "value": "clientvm"
+        },
+        "splunkvmName": {
+            "value": "splunkvm"
+        },
+        "splunkAdminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "sshFrom": {
+            "value": "0.0.0.0/0"
+        },
+        "forwardedDataFrom": {
+            "value": "0.0.0.0/0"
+        },
+        "location": {
+            "value": "eastus"
+        },
+        "tag": {
+            "value": {
+                "value1": "splunk"
+            }
+        },
+        "armBaseUrl": {
+            "value": "https://raw.githubusercontent.com/sysgain/arm-base/"
+        },
+        "armComponentUrl": {
+            "value": "https://raw.githubusercontent.com/sysgain/arm-components/staging/splunk/"
+        }
+    }
+}

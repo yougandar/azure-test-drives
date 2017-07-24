@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "loadBalancerName": {
+            "value": "kollective-lb"
+        },
+        "loadBalancersApiVersion": {
+            "value": "2015-06-15"
+        },
+        "publicIPAddressName": {
+            "value": "kollective-pip"
+        },
+        "location": {
+            "value": "westus"
+        }
+    },
+    "tag": {
+        "value": {
+            "key1": "Loadbalancer",
+            "value1": "kollective"
+        }
+    }
+}

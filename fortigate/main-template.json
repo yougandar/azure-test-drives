@@ -1,0 +1,951 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "VirtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_D2",
+            "allowedValues": [
+                "Standard_A3",
+                "Standard_A4",
+                "Standard_A8",
+                "Standard_A9",
+                "Standard_D2",
+                "Standard_D3",
+                "Standard_D4",
+                "Standard_D13",
+                "Standard_D14",
+                "Standard_DS4",
+                "Standard_DS13",
+                "Standard_DS14"
+            ],
+            "metadata": {
+                "description": "Virtual Machine size selection"
+            }
+        },
+        "accountName": {
+            "defaultValue": "licenseautomation",
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Azure Automation account to deploy to."
+            }
+        },
+        "accountName1": {
+            "defaultValue": "licenseautomation1",
+            "type": "string",
+            "metadata": {
+                "description": "The name of the second Azure Automation account to deploy to."
+            }
+        },
+        "variableName": {
+            "defaultValue": "licenseBlobVar",
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Variable to deploy to"
+            }
+        },
+        "regionId": {
+            "defaultValue": "East US 2",
+            "allowedValues": [
+                "Japan East",
+                "East US 2",
+                "West Europe",
+                "Southeast Asia",
+                "South Central US"
+            ],
+            "type": "string",
+            "metadata": {
+                "description": "The region the Automation account is in.This is different from location where servers are deployed"
+            }
+        },
+        "sessionId": {
+            "type": "string",
+            "metadata": {
+                "type": "sessionid",
+                "description": "The GUID Prefix for the runbook job to be started."
+            }
+        },
+        "sessionId1": {
+            "type": "string",
+            "metadata": {
+                "type": "sessionid",
+                "description": "The GUID Prefix for the runbook job to be started."
+            }
+        },
+        "credentialName": {
+            "type": "string",
+            "defaultValue": "cloudtryfortinet",
+            "metadata": {
+                "description": "DefaultAzureCredential is the name of the Automation credential used in this runbook. This credential allows you to authenticate to Azure. "
+            }
+        },
+        "userName": {
+            "type": "string",
+            "defaultValue": "cloudtry@azurestorefortinet.onmicrosoft.com",
+            "metadata": {
+                "description": "The username for the Azure Automation credential."
+            }
+        },
+        "password": {
+            "type": "securestring",
+            "defaultValue": "40net999?",
+            "metadata": {
+                "description": "The password for the Azure Automation credential."
+            }
+        }
+    },
+    "variables": {
+        "prefix": "[uniqueString(resourceGroup().id)]",
+        "rg": "[substring(variables('prefix') ,0 ,9)]",
+        "sessionId1": "[concat(substring(parameters('sessionId1'),0,30),'1240a6')]",
+        "compute_AvailabilitySet_FG_Name": "fgAvailabilitySet",
+        "compute_AvailabilitySet_FG_Id": "[resourceId('Microsoft.Compute/availabilitySets', variables('compute_AvailabilitySet_FG_Name'))]",
+        "storageAccountType": "Standard_LRS",
+        "StorageAccountName": "[concat('fortinet',variables('prefix'),'st')]",
+        "location": "[resourceGroup().location]",
+        "vmStorageAccountContainerName": "vhds",
+        "vmSize": "[parameters('VirtualMachineSize')]",
+        "VNetName": "[concat('Fortinet-',variables('prefix'))]",
+        "virtualNetworkRGName": "[concat('fortinet',variables('prefix'),'rg')]",
+        "Subnet1Name": "[concat('PublicFacingSubnet-',variables('prefix'))]",
+        "Subnet2Name": "[concat('FortigateProtectedSubnet-',variables('prefix'))]",
+        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('VNetName'))]",
+        "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', variables('Subnet1Name'))]",
+        "subnet2Ref": "[concat(variables('vnetID'),'/subnets/', variables('Subnet2Name'))]",
+        "VNetAddressPrefix": "10.1.0.0/16",
+        "Subnet1Prefix": "10.1.0.0/24",
+        "Subnet2Prefix": "10.1.1.0/24",
+        "vmNamePrefix": "[concat('Fortinet-',variables('rg'))]",
+        "vmName": "[concat(variables('vmNamePrefix'),'-A')]",
+        "vm2Name": "[concat(variables('vmNamePrefix'),'-B')]",
+        "virtualMachines_fortinettestmachine_name": "FortinetTestVM",
+        "routeTable1Name": "[concat(variables('vmName'),'PublicFacingSubnetRoutes')]",
+        "routeTable2Name": "[concat(variables('vmName'),'ProtectedSubnetRoutes')]",
+        "FGProtectedAddress": "10.1.1.4",
+        "FGPubFacingAddress": "10.1.0.4",
+        "routeTable1BName": "[concat(variables('vm2Name'),'PublicFacingSubnetRoutes')]",
+        "routeTable2BName": "[concat(variables('vm2Name'),'ProtectedSubnetRoutes')]",
+        "FGBProtectedAddress": "10.1.1.5",
+        "FGBPubFacingAddress": "10.1.0.5",
+        "scaleNumber": 1,
+        "apiVer": "2015-06-15",
+        "artifactsBaseUrl": "https://aztdrepo.blob.core.windows.net/fortinet",
+        "compute_VM_fg1_Name": "[variables('vmName')]",
+        "compute_VM_fg2_Name": "[variables('vm2Name')]",
+        "network_NIC_fg11_Name": "[concat(variables('vmName'),'Nic0')]",
+        "network_NIC_fg11_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg11_Name'))]",
+        "network_NIC_fg12_Name": "[concat(variables('vmName'),'Nic1')]",
+        "network_NIC_fg12_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg12_Name'))]",
+        "network_NIC_fg21_Name": "[concat(variables('vm2Name'),'Nic0')]",
+        "network_NIC_fg21_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg21_Name'))]",
+        "network_NIC_fg22_Name": "[concat(variables('vm2Name'),'Nic1')]",
+        "network_NIC_fg22_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg22_Name'))]",
+        "networkInterfaces_fortinettestmachineNic2_name": "[concat(variables('virtualMachines_fortinettestmachine_name'),'Nic')]",
+        "storage_Acct_1_Id": "[resourceId('Microsoft.Storage/storageAccounts',variables('StorageAccountName'))]",
+        "storageAccountSetupURL": "[concat(variables('artifactsBaseUrl'),'/nested/','storageAccount-new','.json')]",
+        "publicIPSetupURL": "[concat(variables('artifactsBaseUrl'),'/nested/','publicip-new','.json')]",
+        "virtualNetworkSetupURL": "[concat(variables('artifactsBaseUrl'),'/nested/','vnet-new','.json')]",
+        "adminUserName": "testdriveadmin",
+        "adminPassword": "P@ssword1",
+        "publicIPAddressResourceGroup": "[concat('Fortinet-',variables('prefix'),'-PublicIPRG')]",
+        "publicIPAddressName": "[concat('Fortinet-',variables('prefix'),'-PublicIPName')]",
+        "uniqueDnsPrefixForPublicIP": "[concat('fortinet',variables('prefix'),'publicipdns')]",
+        "storageAccountExistingRG": "[concat('fortinet-',variables('prefix'),'-storageaccrg')]",
+        "accountName": "[concat(parameters('accountName'),variables('rg'))]",
+        "accountName1": "[concat(parameters('accountName1'),variables('rg'))]",
+        "variableName": "[parameters('variableName')]",
+        "variableOutputNestedTemplateUrl": "[concat(variables('artifactsBaseUrl'),'/nested/','GetVariableDataNestedDeploymentTemplate','.json')]",
+        "jobId": "[concat(parameters('sessionId'))]",
+        "jobId1": "[concat(variables('sessionId1'))]",
+        "runbookName": "Get-FortinetLicense",
+        "scriptUri": "[concat(variables('artifactsBaseUrl'),'/scripts/','fortinetscript.ps1')]",
+        "runbookDescription": "Retrieves a temporary URL for Fortinet License",
+        "sku": "Free"
+    },
+    "outputs": {
+        "url": {
+            "type": "string",
+            "value": "[concat('https://',variables('uniqueDnsPrefixForPublicIP'), '.', variables('location'), '.cloudapp.azure.com')]"
+        },
+        "login": {
+            "type": "string",
+            "value": "[variables('adminUsername')]"
+        },
+        "password": {
+            "type": "string",
+            "value": "[variables('adminPassword')]"
+        },
+        "Fortigate-A-license": {
+            "type": "string",
+            "value": "[reference('variableOutputNestedTemplate').outputs.exampleOutput.value]"
+        },
+        "Fortigate-B-license": {
+            "type": "string",
+            "value": "[reference('variableOutputNestedTemplate1').outputs.exampleOutput.value]"
+        },
+        "FortiGate-A-PrivateIP": {
+            "type": "string",
+            "value": "10.1.0.4"
+        },
+        "FortiGate-B-PrivateIP": {
+            "type": "string",
+            "value": "10.1.0.5"
+        },
+        "ResourceGroupIdentifier": {
+            "type": "string",
+            "value": "[variables('rg')]"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('compute_AvailabilitySet_FG_Name')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]"
+        },
+        {
+            "name": "SettingUpStorageAccount",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('storageAccountSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccountType')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('StorageAccountName')]"
+                    },
+                    "storageAccountExistingRG": {
+                        "value": "[variables('storageAccountExistingRG')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "name": "[variables('routeTable1Name')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "PublicFacingtoFortigateProtected",
+                        "properties": {
+                            "addressPrefix": "[variables('Subnet2Prefix')]",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[variables('FGPubFacingAddress')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "name": "[variables('routeTable2Name')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "FortigateProtectedtoPublicFacing",
+                        "properties": {
+                            "addressPrefix": "[variables('Subnet1Prefix')]",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[variables('FGProtectedAddress')]"
+                        }
+                    },
+                    {
+                        "name": "FortigateProtectedtoDefault",
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIPAddress": "[variables('FGProtectedAddress')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "name": "[variables('routeTable1BName')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "PublicFacingtoFortigateProtected",
+                        "properties": {
+                            "addressPrefix": "[variables('Subnet2Prefix')]",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[variables('FGBPubFacingAddress')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables",
+            "name": "[variables('routeTable2BName')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "FortigateProtectedtoPublicFacing",
+                        "properties": {
+                            "addressPrefix": "[variables('Subnet1Prefix')]",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[variables('FGBProtectedAddress')]"
+                        }
+                    },
+                    {
+                        "name": "FortigateProtectedtoDefault",
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIPAddress": "[variables('FGBProtectedAddress')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "SettingUpVirtualNetwork",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[concat('Microsoft.Network/routeTables/', variables('routeTable1Name'))]",
+                "[concat('Microsoft.Network/routeTables/', variables('routeTable2Name'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualNetworkSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vnetName": {
+                        "value": "[variables('VNetName')]"
+                    },
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressPrefix')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('Subnet1Name')]"
+                    },
+                    "subnet1AddressPrefix": {
+                        "value": "[variables('Subnet1Prefix')]"
+                    },
+                    "subnet2Name": {
+                        "value": "[variables('Subnet2Name')]"
+                    },
+                    "subnet2AddressPrefix": {
+                        "value": "[variables('Subnet2Prefix')]"
+                    },
+                    "vnetResourceGroup": {
+                        "value": "[variables('virtualNetworkRGName')]"
+                    },
+                    "routeTable1Name": {
+                        "value": "[variables('routeTable1Name')]"
+                    },
+                    "routeTable2Name": {
+                        "value": "[variables('routeTable2Name')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "name": "SettingUpPublicIPandFollowing",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpVirtualNetwork')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('publicIPSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "vmNamePrefix": {
+                        "value": "[variables('vmNamePrefix')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "publicIPAddressType": {
+                        "value": "Static"
+                    },
+                    "dnsName": {
+                        "value": "[variables('uniqueDnsPrefixForPublicIP')]"
+                    },
+                    "publicIPAddressResourceGroup": {
+                        "value": "[variables('publicIPAddressResourceGroup')]"
+                    },
+                    "VMName": {
+                        "value": "[variables('vmName')]"
+                    },
+                    "VM2Name": {
+                        "value": "[variables('vm2Name')]"
+                    },
+                    "VNetName": {
+                        "value": "[variables('VNetName')]"
+                    },
+                    "FGPubFacingAddress": {
+                        "value": "[variables('FGPubFacingAddress')]"
+                    },
+                    "FGBPubFacingAddress": {
+                        "value": "[variables('FGBPubFacingAddress')]"
+                    },
+                    "subnet1Ref": {
+                        "value": "[variables('subnet1Ref')]"
+                    },
+                    "network_NIC_fg11_Name": {
+                        "value": "[variables('network_NIC_fg11_Name')]"
+                    },
+                    "network_NIC_fg21_Name": {
+                        "value": "[variables('network_NIC_fg21_Name')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVer')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('network_NIC_fg12_Name')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpVirtualNetwork')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('FGProtectedAddress')]",
+                            "subnet": {
+                                "id": "[variables('subnet2Ref')]"
+                            }
+                        }
+                    }
+                ],
+                "enableIPForwarding": true
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVer')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('network_NIC_fg22_Name')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpVirtualNetwork')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('FGBProtectedAddress')]",
+                            "subnet": {
+                                "id": "[variables('subnet2Ref')]"
+                            }
+                        }
+                    }
+                ],
+                "enableIPForwarding": true
+            }
+        },
+        {
+            "comments": "Generalized from resource: '/subscriptions/7eab3893-bd71-4690-84a5-47624df0b0e5/resourceGroups/orbiteraazuretestdrive718i33278/providers/Microsoft.Network/networkInterfaces/fortinettestmachineNic2'.",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('networkInterfaces_fortinettestmachineNic2_name')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "10.1.1.6",
+                            "privateIPAllocationMethod": "Static",
+                            "subnet": {
+                                "id": "[variables('subnet2Ref')]"
+                            }
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableIPForwarding": false
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpVirtualNetwork')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('compute_VM_fg1_Name')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "plan": {
+                "name": "fortinet_fg-vm",
+                "publisher": "fortinet",
+                "product": "fortinet_fortigate-vm_v5"
+            },
+            "copy": {
+                "name": "vmLoop",
+                "count": "[variables('scaleNumber')]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpPublicIPandFollowing')]",
+                "[concat('Microsoft.Network/networkInterfaces/',variables('network_NIC_fg12_Name'))]",
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpStorageAccount')]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "availabilitySet": {
+                    "id": "[variables('compute_AvailabilitySet_FG_Id')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('compute_VM_fg1_Name')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[variables('adminPassword')]"
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('http://', variables('StorageAccountName'), '.blob.core.windows.net')]"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "fortinet",
+                        "offer": "fortinet_fortigate-vm_v5",
+                        "sku": "fortinet_fg-vm",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('compute_VM_fg1_Name'),'-osDisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('StorageAccountName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg1_Name'), '-osdisk', '.vhd')]"
+                        }
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('compute_VM_fg1_Name'),'-dataDisk')]",
+                            "diskSizeGB": "30",
+                            "lun": 0,
+                            "vhd": {
+                                "uri": "[concat('http://',variables('StorageAccountName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg1_Name'), '-datadisk', '.vhd')]"
+                            },
+                            "createOption": "Empty"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[variables('network_NIC_fg11_Id')]"
+                        },
+                        {
+                            "properties": {
+                                "primary": false
+                            },
+                            "id": "[variables('network_NIC_fg12_Id')]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('compute_VM_fg2_Name')]",
+            "apiVersion": "[variables('apiVer')]",
+            "location": "[variables('location')]",
+            "plan": {
+                "name": "fortinet_fg-vm",
+                "publisher": "fortinet",
+                "product": "fortinet_fortigate-vm_v5"
+            },
+            "copy": {
+                "name": "vmLoop",
+                "count": "[variables('scaleNumber')]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpPublicIPandFollowing')]",
+                "[concat('Microsoft.Network/networkInterfaces/',variables('network_NIC_fg22_Name'))]",
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpStorageAccount')]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "availabilitySet": {
+                    "id": "[variables('compute_AvailabilitySet_FG_Id')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('compute_VM_fg2_Name')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[variables('adminPassword')]"
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('http://', variables('StorageAccountName'), '.blob.core.windows.net')]"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "fortinet",
+                        "offer": "fortinet_fortigate-vm_v5",
+                        "sku": "fortinet_fg-vm",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('compute_VM_fg2_Name'),'-osDisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('StorageAccountName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg2_Name'), '-osdisk', '.vhd')]"
+                        }
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('compute_VM_fg2_Name'),'-dataDisk')]",
+                            "diskSizeGB": "30",
+                            "lun": 0,
+                            "vhd": {
+                                "uri": "[concat('http://',variables('StorageAccountName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg2_Name'), '-datadisk', '.vhd')]"
+                            },
+                            "createOption": "Empty"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[variables('network_NIC_fg21_Id')]"
+                        },
+                        {
+                            "properties": {
+                                "primary": false
+                            },
+                            "id": "[variables('network_NIC_fg22_Id')]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "comments": "Generalized from resource: '/subscriptions/7eab3893-bd71-4690-84a5-47624df0b0e5/resourceGroups/orbiteraazuretestdrive718i33278/providers/Microsoft.Compute/virtualMachines/fortinettestmachine'.",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('virtualMachines_fortinettestmachine_name')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS1"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "14.04.4-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('virtualMachines_fortinettestmachine_name'),'-osDisk')]",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('StorageAccountName'), '.blob.core.windows.net', concat('/vhds/', variables('virtualMachines_fortinettestmachine_name'),'-osdisk.vhd'))]"
+                        },
+                        "caching": "ReadWrite"
+                    },
+                    "dataDisks": []
+                },
+                "osProfile": {
+                    "computerName": "[variables('virtualMachines_fortinettestmachine_name')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[variables('adminPassword')]"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_fortinettestmachineNic2_name'))]"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'SettingUpStorageAccount')]",
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_fortinettestmachineNic2_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "name": "[variables('accountName')]",
+            "apiVersion": "2015-01-01-preview",
+            "location": "[parameters('regionId')]",
+            "tags": {},
+            "properties": {
+                "sku": {
+                    "name": "[variables('sku')]"
+                }
+            },
+            "resources": [
+                {
+                    "name": "[variables('runbookName')]",
+                    "type": "runbooks",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[parameters('regionId')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "tags": {},
+                    "properties": {
+                        "runbookType": "Script",
+                        "logProgress": "false",
+                        "logVerbose": "false",
+                        "description": "[variables('runbookDescription')]",
+                        "publishContentLink": {
+                            "uri": "[variables('scriptUri')]",
+                            "version": "1.0.0.0"
+                        }
+                    }
+                },
+                {
+                    "name": "[parameters('credentialName')]",
+                    "type": "credentials",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[parameters('regionId')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "tags": {},
+                    "properties": {
+                        "userName": "[parameters('userName')]",
+                        "password": "[parameters('password')]"
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName'), '/', variables('variableName'))]",
+                    "type": "Microsoft.Automation/automationAccounts/variables",
+                    "apiVersion": "2015-10-31",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]"
+                    ],
+                    "properties": {
+                        "variable": {
+                            "name": "[variables('variableName')]",
+                            "type": "string",
+                            "value": "",
+                            "Encrypted": false
+                        }
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName'), '/', variables('jobId'))]",
+                    "type": "Microsoft.Automation/automationAccounts/jobs",
+                    "apiVersion": "2015-10-31",
+                    "location": "[parameters('regionId')]",
+                    "tags": {
+                        "key": "value"
+                    },
+                    "properties": {
+                        "runbook": {
+                            "name": "[variables('runbookName')]"
+                        },
+                        "parameters": {
+                            "Tdid": "[variables('rg')]",
+                            "accountName": "[variables('accountName')]",
+                            "variableName": "[variables('variableName')]",
+                            "ISVName": "Fortinet",
+                            "credentialName": "[parameters('credentialName')]",
+                            "resourceGroupName": "[resourceGroup().name]"
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/variables', variables('accountName'), variables('variableName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'), '/runbooks/',variables('runbookName'))]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('compute_VM_fg2_Name'))]",
+                "[concat('Microsoft.Compute/virtualMachines/', variables('compute_VM_fg1_Name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "name": "[variables('accountName1')]",
+            "apiVersion": "2015-01-01-preview",
+            "location": "[parameters('regionId')]",
+            "tags": {},
+            "properties": {
+                "sku": {
+                    "name": "[variables('sku')]"
+                }
+            },
+            "resources": [
+                {
+                    "name": "[variables('runbookName')]",
+                    "type": "runbooks",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[parameters('regionId')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'))]"
+                    ],
+                    "tags": {},
+                    "properties": {
+                        "runbookType": "Script",
+                        "logProgress": "false",
+                        "logVerbose": "false",
+                        "description": "[variables('runbookDescription')]",
+                        "publishContentLink": {
+                            "uri": "[variables('scriptUri')]",
+                            "version": "1.0.0.0"
+                        }
+                    }
+                },
+                {
+                    "name": "[parameters('credentialName')]",
+                    "type": "credentials",
+                    "apiVersion": "2015-01-01-preview",
+                    "location": "[parameters('regionId')]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'))]"
+                    ],
+                    "tags": {},
+                    "properties": {
+                        "userName": "[parameters('userName')]",
+                        "password": "[parameters('password')]"
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName1'), '/', variables('variableName'))]",
+                    "type": "Microsoft.Automation/automationAccounts/variables",
+                    "apiVersion": "2015-10-31",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'))]"
+                    ],
+                    "properties": {
+                        "variable": {
+                            "name": "[variables('variableName')]",
+                            "type": "string",
+                            "value": "",
+                            "Encrypted": false
+                        }
+                    }
+                },
+                {
+                    "name": "[concat(variables('accountName1'), '/', variables('jobId1'))]",
+                    "type": "Microsoft.Automation/automationAccounts/jobs",
+                    "apiVersion": "2015-10-31",
+                    "location": "[parameters('regionId')]",
+                    "tags": {
+                        "key": "value"
+                    },
+                    "properties": {
+                        "runbook": {
+                            "name": "[variables('runbookName')]"
+                        },
+                        "parameters": {
+                            "Tdid": "[variables('rg')]",
+                            "accountName": "[variables('accountName1')]",
+                            "variableName": "[variables('variableName')]",
+                            "ISVName": "Fortinet",
+                            "credentialName": "[parameters('credentialName')]",
+                            "resourceGroupName": "[resourceGroup().name]"
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/variables', variables('accountName1'), variables('variableName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'), '/runbooks/',variables('runbookName'))]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('compute_VM_fg2_Name'))]",
+                "[concat('Microsoft.Compute/virtualMachines/', variables('compute_VM_fg1_Name'))]"
+            ]
+        },
+        {
+            "name": "variableOutputNestedTemplate",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templatelink": {
+                    "uri": "[variables('variableOutputNestedTemplateUrl')]",
+                    "contentVersion": "1.0"
+                },
+                "parameters": {
+                    "accountName": {
+                        "value": "[variables('accountName')]"
+                    },
+                    "variableName": {
+                        "value": "[variables('variableName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Automation/automationAccounts/', variables('accountName'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts/jobs', variables('accountName'), variables('jobId'))]"
+            ]
+        },
+        {
+            "name": "variableOutputNestedTemplate1",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templatelink": {
+                    "uri": "[variables('variableOutputNestedTemplateUrl')]",
+                    "contentVersion": "1.0"
+                },
+                "parameters": {
+                    "accountName": {
+                        "value": "[variables('accountName1')]"
+                    },
+                    "variableName": {
+                        "value": "[variables('variableName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Automation/automationAccounts/', variables('accountName1'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts/jobs', variables('accountName1'), variables('jobId1'))]"
+            ]
+        }
+    ]
+}

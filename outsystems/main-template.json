@@ -1,0 +1,274 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUserName": {
+            "type": "string",
+            "metadata": {
+                "description": "UserName for the Virtual Machine"
+            },
+            "defaultValue": "testuser"
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Password for the Virtual Machine"
+            },
+            "defaultValue": "Qwerty12"
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D1"
+        }
+    },
+    "variables": {
+        "addressPrefix": "10.0.0.0/16",
+        "prefix": "[uniqueString(resourceGroup().id)]",
+        "IpFinderURL": "https://outsystemresources.blob.core.windows.net/outsystemsscript/IpFinder.ps1",
+        "IpFinderName": "IpFinder.ps1",
+        "imageOffer": "outsystems",
+        "imagePublisher": "outsystems",
+        "location": "eastus",
+        "RDPport": "3389",
+        "networkSecurityGroupName": "[concat('nsg-',variables('prefix'))]",
+        "newStorageAccountName": "[concat('sa',variables('prefix'))]",
+        "nicName": "[concat('nic-',variables('prefix'))]",
+        "OSDiskName": "[concat('disk-',variables('prefix'))]",
+        "publicIPAddressName": "[concat('srv-',variables('prefix'))]",
+        "publicIPAddressType": "Static",
+        "skusVersion": "outsystems_azure_intro",
+        "storageAccountType": "Standard_LRS",
+        "subnetName": "Subnet",
+        "subnetPrefix": "10.0.0.0/24",
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
+        "virtualNetworkName": "[concat('vnet-',variables('prefix'))]",
+        "vmName": "[concat('vm-',variables('prefix'))]",
+        "vmStorageAccountContainerName": "vhds",
+        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('newStorageAccountName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "properties": {
+                "accountType": "[variables('storageAccountType')]"
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[variables('publicIPAddressName')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Web",
+                        "properties": {
+                            "description": "Web",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1100,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "SSL",
+                        "properties": {
+                            "description": "SSL",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1200,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "default-allow-rdp",
+                        "properties": {
+                            "description": "default-allow-rdp",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "[variables('RDPport')]",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1300,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+            ],
+            "properties": {
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('networkSecurityGroupName'))]"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('vmName')]",
+            "location": "[variables('location')]",
+            "plan": {
+                "name": "outsystems_azure_intro",
+                "publisher": "outsystems",
+                "product": "outsystems"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('newStorageAccountName'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computername":"[substring(variables('vmName'), 0, 15)]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('skusVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('newStorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),'.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "type": "Microsoft.Compute/virtualMachines/extensions",
+                    "name": "[concat(variables('vmName'),'/IpFinder')]",
+                    "apiVersion": "2015-06-15",
+                    "location": "[variables('location')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Compute",
+                        "type": "CustomScriptExtension",
+                        "typeHandlerVersion": "1.4",
+                        "settings": {
+                            "fileUris": [
+                                "[variables('IpFinderURL')]"
+                            ],
+                            "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ', variables('IpFinderName'))]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "addresstovm outsystems": {
+            "type": "string",
+            "value": "[concat(variables('publicIPAddressName'),'.',resourceGroup().location,'.cloudapp.azure.com')]"
+        },
+        "outsystems licence link": {
+            "type": "string",
+            "value": "[concat('http://www.outsystems.com/Azure/?servername=',reference(variables('publicIPAddressName')).ipAddress)]"
+        },
+        "vm rdp ip address": {
+            "type": "string",
+            "value": "[reference(variables('publicIPAddressName')).ipAddress]"
+        },
+        "vm rdp port": {
+            "type": "string",
+            "value": "[variables('RDPport')]"
+        },
+        "username": {
+            "type": "string",
+            "value": "[parameters('adminUserName')]"
+        },
+        "password": {
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        },
+        "vmlocation": {
+            "value": "[resourceGroup().location]",
+            "type": "string"
+        }
+    }
+}

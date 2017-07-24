@@ -1,0 +1,1354 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmHostNamePrefix": {
+            "type": "string",
+            "defaultValue": "ela",
+            "maxLength": 5,
+            "metadata": {
+                "description": "The prefix to use for hostnames when naming virtual machines in the cluster. Can be up to 5 characters in length, must begin with an alphanumeric character and can contain alphanumeric and hyphen characters. Hostnames are used for resolution of master nodes so if you are deploying a cluster into an existing virtual network containing an existing Elasticsearch cluster, be sure to set this to a unique prefix to differentiate the hostnames of this cluster from an existing cluster"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "kibanauser",
+            "metadata": {
+                "description": "Admin username used when provisioning virtual machines"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "Kibana4205!",
+            "metadata": {
+                "description": "Admin password"
+            }
+        },
+        "authenticationType": {
+            "type": "string",
+            "defaultValue": "password",
+            "metadata": {
+                "description": "Choose a password or ssh public key for the Admin username used to access virtual machines"
+            }
+        },
+        "vNetName": {
+            "type": "string",
+            "defaultValue": "es-net",
+            "metadata": {
+                "description": "Virtual Network Name"
+            }
+        },
+        "vNetNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "metadata": {
+                "description": "Choose to create a new Virtual Network or use an existing one. If choosing an existing network, the subnet also needs to exist."
+            }
+        },
+        "vNetNewAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24",
+            "metadata": {
+                "description": "The address prefix size to use for a New Virtual Network. Required when creating a new Virtual Network"
+            }
+        },
+        "vNetSubnetName": {
+            "type": "string",
+            "defaultValue": "es-subnet",
+            "metadata": {
+                "description": "Subnet name to use for Elasticsearch nodes"
+            }
+        },
+        "vNetNewSubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/25",
+            "metadata": {
+                "description": "The address space of the subnet. Required when creating a new Virtual Network"
+            }
+        },
+        "vNetLoadBalancerIp": {
+            "type": "string",
+            "defaultValue": "10.0.0.4",
+            "metadata": {
+                "description": "The static IP address for the internal load balancer. This must be an available IP address in the specified subnet"
+            }
+        },
+        "loadBalancerType": {
+            "type": "string",
+            "defaultValue": "internal",
+            "allowedValues": [
+                "internal",
+                "external"
+            ],
+            "metadata": {
+                "description": "Setup the load balancer as internal or external. If you are setting up Elasticsearch on an external endpoint you will need to secure your nodes with a product like Elastic's security"
+            }
+        },
+        "esClusterName": {
+            "type": "string",
+            "defaultValue": "elasticsearch",
+            "metadata": {
+                "description": "The name of the Elasticsearch cluster"
+            }
+        },
+        "esVersion": {
+            "type": "string",
+            "defaultValue": "5.1.2",
+            "allowedValues": [
+                "2.0.2",
+                "2.1.2",
+                "2.2.0",
+                "2.3.2",
+                "2.3.3",
+                "2.3.4",
+                "2.3.5",
+                "2.4.0",
+                "2.4.1",
+                "5.0.2",
+                "5.1.1",
+                "5.1.2"
+            ],
+            "metadata": {
+                "description": "Elasticsearch version to install"
+            }
+        },
+        "esPlugins": {
+            "type": "string",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "defaultValue": "Yes",
+            "metadata": {
+                "description": "Install the Plugins - Marvel, security, Watcher, Graph* (Elasticsearch 2.3.0+)"
+            }
+        },
+        "esAdditionalPlugins": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Additional elasticsearch plugins to install.  Each plugin must be separated by a semicolon. e.g. analysis-icu;mapper-attachments"
+            }
+        },
+        "securityAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "esadmin@123",
+            "metadata": {
+                "description": "Password for the superuser 'es_admin' in 2.x, or 'elastic' in 5.x and up. Must be > 6 characters"
+            }
+        },
+        "securityReadPassword": {
+            "type": "securestring",
+            "defaultValue": "esread@123",
+            "metadata": {
+                "description": "Password for the 'es_read' user with user (read-only) role. Must be > 6 characters"
+            }
+        },
+        "securityKibanaPassword": {
+            "type": "securestring",
+            "defaultValue": "eskibana@123",
+            "metadata": {
+                "description": "Password for the `es_kibana` user with kibana4 role. Must be > 6 characters"
+            }
+        },
+        "userCompany": {
+            "type": "string",
+            "defaultValue": "usercompany",
+            "metadata": {
+                "description": "Name of your company"
+            }
+        },
+        "userEmail": {
+            "type": "string",
+            "defaultValue": "username",
+            "metadata": {
+                "description": "Your email address"
+            }
+        },
+        "userFirstName": {
+            "type": "string",
+            "defaultValue": "user",
+            "metadata": {
+                "description": "Your first name"
+            }
+        },
+        "userLastName": {
+            "type": "string",
+            "defaultValue": "name",
+            "metadata": {
+                "description": "Your last name"
+            }
+        },
+        "userJobTitle": {
+            "type": "string",
+            "defaultValue": "Other",
+            "allowedValues": [
+                "IT Executive (CIO, CTO, VP Engineering, etc.)",
+                "Business Executive (CEO, COO, CMO, etc.)",
+                "Architect",
+                "Business Development/Alliance Manager",
+                "DBA",
+                "Technical Operations",
+                "Director / Development Manager",
+                "Product / Project Manager",
+                "Software Developer / Engineer",
+                "Consultant",
+                "Student",
+                "Other"
+            ],
+            "metadata": {
+                "description": "Your job title. Pick the nearest description that matches"
+            }
+        },
+        "userCountry": {
+            "type": "string",
+            "defaultValue": "india",
+            "metadata": {
+                "description": "The country in which you are based"
+            }
+        },
+        "dataNodesAreMasterEligible": {
+            "type": "string",
+            "defaultValue": "No",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "metadata": {
+                "description": "Make all data nodes master-eligible. This can be useful for small elasticsearch cluster deployments, but for larger deployments it is recommended to use dedicated master nodes"
+            }
+        },
+        "kibana": {
+            "type": "string",
+            "defaultValue": "Yes",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "metadata": {
+                "description": "Provision a machine with Kibana on it"
+            }
+        },
+        "vmDataNodeCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "minValue": 1,
+            "metadata": {
+                "description": "Number of Elasticsearch data nodes"
+            }
+        },
+        "vmSizeKibana": {
+            "type": "string",
+            "defaultValue": "Standard_A1",
+            "metadata": {
+                "description": "Size of the Elasticsearch Kibana node"
+            }
+        },
+        "vmSizeMasterNodes": {
+            "type": "string",
+            "defaultValue": "Standard_D1",
+            "metadata": {
+                "description": "Size of the Elasticsearch master nodes, if data nodes are not master eligible, 3 master nodes of this size will be provisioned"
+            }
+        },
+        "jumpbox": {
+            "type": "string",
+            "defaultValue": "No",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "metadata": {
+                "description": "Optionally add a virtual machine to the deployment which can be used to connect and manage virtual machines within the cluster"
+            }
+        },
+        "vmSizeDataNodes": {
+            "type": "string",
+            "defaultValue": "Standard_D1",
+            "metadata": {
+                "description": "Size of the Elasticsearch data nodes"
+            }
+        },
+        "vmClientNodeCount": {
+            "type": "int",
+            "defaultValue": 0,
+            "minValue": 0,
+            "metadata": {
+                "description": "Number of Elasticsearch client nodes to provision (Setting this to zero puts the data nodes on the load balancer)"
+            }
+        },
+        "vmSizeClientNodes": {
+            "type": "string",
+            "defaultValue": "Standard_D1",
+            "metadata": {
+                "description": "Size of the Elasticsearch client nodes"
+            }
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Default",
+            "allowedValues": [
+                "Default",
+                "Standard"
+            ],
+            "metadata": {
+                "description": "The storage account type of the attached disks (Default or Standard). The Default storage account type will be Premium Storage for VMs that support Premium Storage and Standard Storage for those that do not."
+            }
+        },
+        "vmDataDiskSize": {
+            "type": "string",
+            "defaultValue": "Large",
+            "allowedValues": [
+                "Small",
+                "Medium",
+                "Large"
+            ],
+            "metadata": {
+                "description": "The disk size of each attached disk, Small (128Gb), Medium (512Gb) or Large (1024Gb). For Premium Storage, this equates to P10, P20 and P30, respectively."
+            }
+        },
+        "vmDataDiskCount": {
+            "type": "int",
+            "defaultValue": 2,
+            "metadata": {
+                "description": "Number of disks to attach to each data node in RAID 0 setup. If the number of disks selected is more than can be attached to the data node VM size, the maximum number of disks that can be attached will be used. If 1 disk is selected, it is not RAIDed. If 0 disks are selected, the temporary disk will be used to store Elasticsearch data. IMPORTANT: The temporary disk is ephemeral in nature so be sure you now the trade-offs when choosing 0 disks."
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_A1",
+            "metadata": {
+                "description": "Size of the Kibana VM"
+            }
+        },
+        "azureCloudStorageAccountName": {
+            "type": "string",
+            "defaultValue": "",
+            "maxLength": 24,
+            "metadata": {
+                "description": "The name of an existing storage account to use for snapshots with Azure Cloud plugin. Must be between 3 and 24 alphanumeric lowercase characters."
+            }
+        },
+        "azureCloudStorageAccountKey": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The access key of an existing storage account to use for snapshots with Azure Cloud plugin"
+            }
+        },
+        "azureCloudPlugin": {
+            "type": "string",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "defaultValue": "No",
+            "metadata": {
+                "description": "Choose whether to install Azure Cloud plugin. The plugin allows an existing Azure storage account to be used for snapshot and restore"
+            }
+        },
+        "clientAdminUsername": {
+            "type": "string",
+            "defaultValue": "clientuser",
+            "metadata": {
+                "description": "vm Admin Username of Virtual Machine to SSH or RDP"
+            }
+        },
+        "clientAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "client@12345",
+            "metadata": {
+                "description": "vm Admin Password of Virtual Machine to SSH or RDP"
+            }
+        }
+        
+    },
+    "variables": {
+        "location":"[resourceGroup().location]",
+        "virtualMachinesNameClient": "[concat('client','-Vm')]",
+        "customScriptClientName": "[concat('client','-Script')]",
+        "masterNodeNicPvtIp": "10.0.0.",
+        "dataNodeNicPvtIp": "10.0.0.",
+        "clientPrivateIPAddress": "10.0.0.22",
+        "kibanaPrivateIPAddress": "10.0.0.20",
+        "azureCloudStorageAccount": {
+            "name": "[parameters('azureCloudStorageAccountName')]",
+            "key": "[parameters('azureCloudStorageAccountKey')]",
+            "install": "[parameters('azureCloudPlugin')]"
+        },
+        "networkSettings": {
+            "name": "[parameters('vNetName')]",
+            "resourceGroup": "[variables('networkResourceGroupMap')[parameters('vNetNewOrExisting')]]",
+            "location": "[variables('location')]",
+            "addressPrefix": "[parameters('vNetNewAddressPrefix')]",
+            "subnet": {
+                "name": "[parameters('vNetSubnetName')]",
+                "addressPrefix": "[parameters('vNetNewSubnetAddressPrefix')]",
+                "loadbalancerIp": "[parameters('vNetLoadBalancerIp')]"
+            }
+        },
+        "avSetCount": "[add(div(sub(variables('data-vm').count, 1), 100), 1)]",
+        "storageAccountPrefix": [
+            "0",
+            "6",
+            "c",
+            "i",
+            "o",
+            "u",
+            "1",
+            "7",
+            "d",
+            "j",
+            "p",
+            "v",
+            "2",
+            "8",
+            "e",
+            "k",
+            "q",
+            "w",
+            "3",
+            "9",
+            "f",
+            "l",
+            "r",
+            "x",
+            "4",
+            "a",
+            "g",
+            "m",
+            "s",
+            "y",
+            "5",
+            "b",
+            "h",
+            "n",
+            "t",
+            "z"
+        ],
+        "storageAccountPrefixCount": "[length(variables('storageAccountPrefix'))]",
+        "newStorageAccountNamePrefix": "[uniqueString(resourceGroup().id, deployment().name)]",
+        "kibana-computerName": "[variables('kibana-nameSpace')]",
+        "esToKibanaMapping": {
+            "2.0.2": "4.2.2",
+            "2.1.2": "4.3.3",
+            "2.2.0": "4.4.2",
+            "2.3.2": "4.5.4",
+            "2.3.3": "4.5.4",
+            "2.3.4": "4.5.4",
+            "2.3.5": "4.5.4",
+            "2.4.0": "4.6.1",
+            "2.4.1": "4.6.1",
+            "5.0.2": "5.0.2",
+            "5.1.1": "5.1.1",
+            "5.1.2": "5.1.2"
+        },
+        "dataNodeShortOpts": {
+            "No": "z",
+            "Yes": ""
+        },
+        "dataNodeShortOpt": "[variables('dataNodeShortOpts')[variables('topologySettings').dataNodesAreMasterEligible]]",
+        "phoneHomeSettings": {
+            "email": "[parameters('userEmail')]",
+            "firstName": "[parameters('userFirstName')]",
+            "lastName": "[parameters('userLastName')]",
+            "jobTitle": "[parameters('userJobTitle')]",
+            "company": "[parameters('userCompany')]",
+            "country": "[parameters('userCountry')]",
+            "topology": "[concat('m=', variables('masterNodeCount')[parameters('dataNodesAreMasterEligible')], ' ', parameters('vmSizeMasterNodes'), ',d=', parameters('vmDataNodeCount'), ' ', parameters('vmSizeDataNodes'), ',c=', parameters('vmClientNodeCount'), ' ', parameters('vmSizeClientNodes'), ',k=', variables('kibanajumpboxNodeCount')[parameters('kibana')], ' ', parameters('vmSizeKibana'), ',j=', variables('kibanajumpboxNodeCount')[parameters('jumpbox')], ' Standard_A0', ',l=', parameters('loadBalancerType'))]"
+        },
+        "masterNodeCount": {
+            "No": "3",
+            "Yes": "0"
+        },
+        "kibanajumpboxNodeCount": {
+            "No": "0",
+            "Yes": "1"
+        },
+        "clientInstallScript": "[concat('bash elasticsearch-ubuntu-install.sh -y', variables('commonShortOpts'), variables('commonInstallParams'))]",
+        "templateBaseUrl": "https://aztdrepo.blob.core.windows.net/elastic/",
+        "commonVmSettings": {
+            "namespacePrefix": "[parameters('vmHostNamePrefix')]",
+            "storageAccountName": "[concat('elastic', uniqueString(resourceGroup().id, deployment().name))]",
+            "location": "[variables('location')]",
+            "subnet": "[variables('networkSettings').subnet]",
+            "subnetId": "[concat(resourceId(variables('networkSettings').resourceGroup, 'Microsoft.Network/virtualNetworks', variables('networkSettings').name), '/subnets/', variables('networkSettings').subnet.name)]",
+            "credentials": {
+                "adminUsername": "[parameters('adminUsername')]",
+                "password": "[parameters('adminPassword')]",
+                "authenticationType": "[parameters('authenticationType')]"
+            }
+        },
+        "networkResourceGroupMap": {
+            "new": "[resourceGroup().name]"
+        },
+        "data-vm": {
+            "shared": "[variables('commonVmSettings')]",
+            "namespace": "[concat(variables('commonVmSettings').namespacePrefix, 'data-')]",
+            "installScript": "[variables('ubuntuSettings').extensionSettings.data]",
+            "size": "[variables('topologySettings').vmSizeDataNodes]",
+            "count": "[variables('topologySettings').vmDataNodeCount]",
+            "useSharedStorageAccount": "No",
+            "useBackendPools": "Yes",
+            "backendPools": "[variables('topologySettings').dataLoadBalancerBackEndPools]",
+            "imageReference": "[variables('ubuntuSettings').imageReference]"
+        },
+        "master-vm": {
+            "shared": "[variables('commonVmSettings')]",
+            "namespace": "[concat(variables('commonVmSettings').namespacePrefix, 'master-')]",
+            "installScript": "[variables('ubuntuSettings').extensionSettings.master]",
+            "size": "[variables('topologySettings').vmSizeMasterNodes]",
+            "count": 3,
+            "useSharedStorageAccount": "Yes",
+            "useBackendPools": "No",
+            "backendPools": [],
+            "imageReference": "[variables('ubuntuSettings').imageReference]"
+        },
+        "master-namespace": "[variables('master-vm').namespace]",
+        "data-namespace": "[variables('data-vm').namespace]",
+        "kibana-nameSpace": "[concat(variables('commonVmSettings').namespacePrefix, 'kibana')]",
+        "installPluginsShortOpt": "[variables('installPluginsShortOpts')[variables('esSettings').installPlugins]]",
+        "installPluginsShortOpts": {
+            "No": "",
+            "Yes": "l"
+        },
+        "namespacePrefix": "[variables('topologySettings').vmHostNamePrefix]",
+        "installAzureCloudPluginShortOpt": "[variables('installAzureCloudPluginShortOpts')[variables('azureCloudStorageAccount').install]]",
+        "commonShortOpts": "[concat(variables('dedicatedMasterNodesShortOpt'),  variables('installPluginsShortOpt'), variables('installAzureCloudPluginShortOpt'), 'n ')]",
+        "commonInstallParams": "[concat(variables('esSettings').clusterName, ' -v ', variables('esSettings').version, ' -A ', variables('esSettings').securityAdminPwd, ' -R ', variables('esSettings').securityReadPwd, ' -K ', variables('esSettings').securityKibanaPwd, ' -S ', variables('esSettings').securityKibanaServerPwd, ' -Z ', variables('topologySettings').vmDataNodeCount, ' -p \"', variables('namespacePrefix'), '\" -a \"', variables('azureCloudStorageAccount').name, '\" -k \"', variables('azureCloudStorageAccount').key, '\" -L \"', variables('esSettings').installAdditionalPlugins, '\"')]",
+        "dedicatedMasterNodesShortOpts": {
+            "No": "d",
+            "Yes": ""
+        },
+        "dedicatedMasterNodesShortOpt": "[variables('dedicatedMasterNodesShortOpts')[variables('topologySettings').dataNodesAreMasterEligible]]",
+        "installAzureCloudPluginShortOpts": {
+            "No": "",
+            "Yes": "j"
+        },
+        "esSettings": {
+            "clusterName": "[parameters('esClusterName')]",
+            "version": "[parameters('esVersion')]",
+            "installPlugins": "[parameters('esPlugins')]",
+            "installAdditionalPlugins": "[parameters('esAdditionalPlugins')]",
+            "securityAdminPwd": "[parameters('securityAdminPassword')]",
+            "securityReadPwd": "[parameters('securityReadPassword')]",
+            "securityKibanaPwd": "[parameters('securityKibanaPassword')]",
+            "securityKibanaServerPwd": "[uniqueString(resourceGroup().id, deployment().name, parameters('securityKibanaPassword'))]",
+            "kibanaVersion": "[variables('esToKibanaMapping')[parameters('esVersion')]]"
+        },
+        "ubuntuScripts": [
+            "[concat(variables('templateBaseUrl'), 'scripts/elasticsearch-ubuntu-install.sh')]",
+            "[concat(variables('templateBaseUrl'), 'scripts/kibana-install.sh')]",
+            "[concat(variables('templateBaseUrl'), 'scripts/vm-disk-utils-0.1.sh')]",
+            "[concat(variables('templateBaseUrl'), 'scripts/user-information.sh')]",
+            "[concat(variables('templateBaseUrl'), 'scripts/data-node-install.sh')]"
+        ],
+        "ubuntuSkus": {
+            "2": "14.04.4-LTS",
+            "5": "16.04.0-LTS"
+        },
+        "ubuntuSku": "[variables('ubuntuSkus')[substring(variables('esSettings').version, 0, 1)]]",
+        "ubuntuSettings": {
+            "imageReference": {
+                "publisher": "Canonical",
+                "offer": "UbuntuServer",
+                "sku": "[variables('ubuntuSku')]",
+                "version": "latest"
+            },
+            "managementPort": "22",
+            "extensionSettings": {
+                "master": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "type": "CustomScript",
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "fileUris": "[variables('ubuntuScripts')]"
+                    },
+                    "protectedSettings": {
+                        "commandToExecute": "[concat('bash elasticsearch-ubuntu-install.sh -x', variables('commonShortOpts'), variables('commonInstallParams'))]"
+                    }
+                },
+                "client": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "type": "CustomScript",
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "fileUris": "[variables('ubuntuScripts')]"
+                    },
+                    "protectedSettings": {
+                        "commandToExecute": "[variables('clientInstallScript')]"
+                    }
+                },
+                "data": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "type": "CustomScript",
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "fileUris": "[variables('ubuntuScripts')]"
+                    },
+                    "protectedSettings": {
+                        "commandToExecute": "[concat('bash data-node-install.sh -', variables('dataNodeShortOpt'), variables('commonShortOpts'), variables('commonInstallParams'), ' -U \"http://app-lon02.marketo.com/index.php/leadCapture/save2\" -I \"813-MAM-392\" -c \"', variables('phoneHomeSettings').company, '\" -e \"', variables('phoneHomeSettings').email, '\" -f \"', variables('phoneHomeSettings').firstName, '\" -m \"', variables('phoneHomeSettings').lastName, '\" -t \"', variables('phoneHomeSettings').jobTitle, '\" -s \"', variables('phoneHomeSettings').topology, '\" -o \"', variables('phoneHomeSettings').country, '\"')]"
+                    }
+                },
+                "kibana": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "type": "CustomScript",
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "fileUris": "[variables('ubuntuScripts')]"
+                    },
+                    "protectedSettings": {
+                        "commandToExecute": "[concat('bash kibana-install.sh -', variables('installPluginsShortOpt'), 'n ', variables('esSettings').clusterName, ' -v ', variables('esSettings').kibanaVersion, ' -e ', variables('esSettings').version, ' -u ', concat('http://', variables('topologySettings').vNetLoadBalancerIp, ':9200') ,' -S ', variables('esSettings').securityKibanaServerPwd)]"
+                    }
+                }
+            }
+        },
+        "nodesPerStorageMapping": {
+            "Standard_LRS_Small_1": 40,
+            "Standard_LRS_Small_2": 20,
+            "Standard_LRS_Small_4": 10,
+            "Standard_LRS_Small_8": 5,
+            "Standard_LRS_Small_16": 2,
+            "Standard_LRS_Small_32": 1,
+            "Standard_LRS_Small_40": 1,
+            "Standard_LRS_Small_0": 0,
+            "Standard_LRS_Medium_1": 40,
+            "Standard_LRS_Medium_2": 20,
+            "Standard_LRS_Medium_4": 10,
+            "Standard_LRS_Medium_8": 5,
+            "Standard_LRS_Medium_16": 2,
+            "Standard_LRS_Medium_32": 1,
+            "Standard_LRS_Medium_40": 1,
+            "Standard_LRS_Medium_0": 0,
+            "Standard_LRS_Large_1": 40,
+            "Standard_LRS_Large_2": 20,
+            "Standard_LRS_Large_4": 10,
+            "Standard_LRS_Large_8": 5,
+            "Standard_LRS_Large_16": 2,
+            "Standard_LRS_Large_32": 1,
+            "Standard_LRS_Large_40": 1,
+            "Standard_LRS_Large_0": 0,
+            "Premium_LRS_Small_1": 250,
+            "Premium_LRS_Small_2": 125,
+            "Premium_LRS_Small_4": 62,
+            "Premium_LRS_Small_8": 31,
+            "Premium_LRS_Small_16": 15,
+            "Premium_LRS_Small_32": 7,
+            "Premium_LRS_Small_40": 6,
+            "Premium_LRS_Small_0": 0,
+            "Premium_LRS_Medium_1": 60,
+            "Premium_LRS_Medium_2": 30,
+            "Premium_LRS_Medium_4": 15,
+            "Premium_LRS_Medium_8": 7,
+            "Premium_LRS_Medium_16": 3,
+            "Premium_LRS_Medium_32": 1,
+            "Premium_LRS_Medium_40": 1,
+            "Premium_LRS_Medium_0": 0,
+            "Premium_LRS_Large_1": 34,
+            "Premium_LRS_Large_2": 17,
+            "Premium_LRS_Large_4": 8,
+            "Premium_LRS_Large_8": 4,
+            "Premium_LRS_Large_16": 2,
+            "Premium_LRS_Large_32": 1,
+            "Premium_LRS_Large_40": 0,
+            "Premium_LRS_Large_0": 0
+        },
+        "storageAccountOverrides": {
+            "Default": "[variables('dataSkuSettings')[parameters('vmSizeDataNodes')].storageAccountType]",
+            "Standard": "Standard_LRS",
+            "Premium": "Premium_LRS"
+        },
+        "dataSkuSettings": {
+            "Standard_D1": {
+                "dataDisks": 2,
+                "storageAccountType": "Standard_LRS"
+            }
+        },
+        "dataDiskSizes": {
+            "Large": 1023,
+            "Medium": 512,
+            "Small": 128
+        },
+        "lbBackendPoolsRemoved": {
+            "backendPools": []
+        },
+        "dataLoadBalancerOptions": [
+            "[variables('lbBackEndPoolsAdded')]",
+            "[variables('lbBackEndPoolsRemoved')]"
+        ],
+        "tmpVmSizeDataDisks": "[variables('dataSkuSettings')[parameters('vmSizeDataNodes')].dataDisks]",
+        "smallestDataDiskOption": "[div(sub(add(int(parameters('vmDataDiskCount')), variables('tmpVmSizeDataDisks')), int(replace(string(sub(int(parameters('vmDataDiskCount')), variables('tmpVmSizeDataDisks'))), '-', ''))), 2)]",
+        "numberOfDataDisks": "[div(add(add(0, variables('smallestDataDiskOption')), int(replace(string(sub(0, variables('smallestDataDiskOption'))), '-', ''))), 2)]",
+        "resolvedStorageAccountType": "[variables('storageAccountOverrides')[parameters('storageAccountType')]]",
+        "nodesPerStorageAccount": "[variables('nodesPerStorageMapping')[concat(variables('resolvedStorageAccountType'), '_', parameters('vmDataDiskSize'), '_', string(variables('numberOfDataDisks')))]]",
+        "nodesPerStorageAccountDiv": "[div(add(add(1, variables('nodesPerStorageAccount')), int(replace(string(sub(1, variables('nodesPerStorageAccount'))), '-', ''))), 2)]",
+        "storageAccountsCount": "[add(div(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')), mod(add(mod(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')),2), add(mod(parameters('vmDataNodeCount'), variables('nodesPerStorageAccountDiv')),1)))]",
+        "topologySettings": {
+            "dataNodesAreMasterEligible": "[parameters('dataNodesAreMasterEligible')]",
+            "vmDataNodeCount": "[parameters('vmDataNodeCount')]",
+            "vmSizeDataNodes": "[parameters('vmSizeDataNodes')]",
+            "vmHostNamePrefix": "[parameters('vmHostNamePrefix')]",
+            "vmClientNodeCount": "[parameters('vmClientNodeCount')]",
+            "vmSizeClientNodes": "[parameters('vmSizeClientNodes')]",
+            "vNetLoadBalancerIp": "[parameters('vNetLoadBalancerIp')]",
+            "vmSizeMasterNodes": "[parameters('vmSizeMasterNodes')]",
+            "vmSizeKibana": "[parameters('vmSizeKibana')]",
+            "kibana": "[parameters('kibana')]",
+            "jumpbox": "[parameters('jumpbox')]",
+            "dataNodeStorageSettings": {
+                "count": "[variables('storageAccountsCount')]",
+                "nodesPerStorageAccount": "[variables('nodesPerStorageAccount')]",
+                "accountType": "[variables('resolvedStorageAccountType')]",
+                "diskSize": "[variables('dataDiskSizes')[parameters('vmDataDiskSize')]]",
+                "dataDisks": "[variables('numberOfDataDisks')]"
+            },
+            "dataLoadBalancerBackEndPools": "[variables('dataLoadBalancerOptions')[variables('clientResourceIndex')].backendPools]",
+            "loadBalancerBackEndPools": "[variables('lbBackEndPoolsAdded').backendPools]"
+        },
+        "clientResourceIndex": "[mod(add(parameters('vmClientNodeCount'),2),add(parameters('vmClientNodeCount'),1))]",
+        "lbBackEndPoolsAdded": {
+            "backendPools": "[variables('backendPoolConfigurations')[parameters('loadBalancerType')]]"
+        },
+        "backendPoolConfigurations": {
+            "internal": [
+                {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+                }
+            ],
+            "external": [
+                {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+                },
+                {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-external-lb'),'/backendAddressPools/LBBE')]"
+                }
+            ]
+        },
+        "kibanaVmName": "[concat(variables('commonVmSettings').namespacePrefix, 'kibana')]",
+        "subnetId": "[concat(resourceId(variables('networkSettings').resourceGroup, 'Microsoft.Network/virtualNetworks', variables('networkSettings').name), '/subnets/', variables('networkSettings').subnet.name)]",
+        "kibana-nicName": "[concat(variables('commonVmSettings').namespacePrefix, 'kibana-nic')]",
+        "securityGroupName": "[concat(variables('commonVmSettings').namespacePrefix, 'kibana-nsg')]",
+        "publicIpName": "[concat(variables('commonVmSettings').namespacePrefix, 'kibana-ip')]",
+         "clientDnsName": "[concat('clientdns',variables('suffix'))]",
+         "suffix": "[substring(uniqueString(resourceGroup().id), 0, 6)]",
+         "networkInterfacesclientName": "[concat('clientinter','-nic')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('commonVmSettings').storageAccountName]",
+            "apiVersion": "2016-01-01",
+            "location": "[variables('commonVmSettings').location]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('networkSettings').name]",
+            "location": "[variables('networkSettings').location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('networkSettings').addressPrefix]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('networkSettings').subnet.name]",
+                        "properties": {
+                            "addressPrefix": "[variables('networkSettings').subnet.addressPrefix]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "name": "es-internal-lb",
+            "type": "Microsoft.Network/loadBalancers",
+            "location": "[variables('networkSettings').location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', variables('networkSettings').name)]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('commonVmSettings').storageAccountName)]"
+            ],
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LBFE",
+                        "properties": {
+                            "subnet": {
+                                "id": "[concat(resourceId(variables('networkSettings').resourceGroup, 'Microsoft.Network/virtualNetworks',variables('networkSettings').name), '/subnets/', variables('networkSettings').subnet.name)]"
+                            },
+                            "privateIPAddress": "[variables('networkSettings').subnet.loadbalancerIp]",
+                            "privateIPAllocationMethod": "Static"
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "LBBE"
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "es-http-internal",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/frontendIPConfigurations/LBFE')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 9200,
+                            "backendPort": 9200,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 5,
+                            "probe": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/probes/es-probe-internal-http')]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "es-transport-internal",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/frontendIPConfigurations/LBFE')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers','es-internal-lb'),'/backendAddressPools/LBBE')]"
+                            },
+                            "protocol": "Tcp",
+                            "frontendPort": 9300,
+                            "backendPort": 9300,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 5
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "es-probe-internal-http",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "port": 9200,
+                            "intervalInSeconds": 30,
+                            "numberOfProbes": 3
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[concat(variables('master-namespace'), 'av-set')]",
+            "location": "[variables('master-vm').shared.location]",
+            "properties": {
+                "platformUpdateDomainCount": 3,
+                "platformFaultDomainCount": 3
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('master-namespace'), copyIndex(), '-nic')]",
+            "location": "[variables('master-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('master-namespace'),'vm-creation-loop')]",
+                "count": "[variables('master-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/availabilitySets/', variables('master-namespace'), 'av-set')]",
+                "[concat('Microsoft.Network/loadBalancers/es-internal-lb')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[concat(variables('masterNodeNicPvtIp'),copyIndex(12))]",
+                            "privateIPAllocationMethod": "Static",
+                            "subnet": {
+                                "id": "[variables('master-vm').shared.subnetId]"
+                            },
+                            "loadBalancerBackendAddressPools": "[variables('master-vm').backendPools]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(variables('master-namespace'), copyIndex())]",
+            "location": "[variables('master-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('master-namespace'),'vm-creation-loop')]",
+                "count": "[variables('master-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/availabilitySets/', variables('master-namespace'), 'av-set')]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('master-namespace'), copyIndex(), '-nic')]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(variables('master-namespace'), 'av-set'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[variables('master-vm').size]"
+                },
+                "osProfile": {
+                    "computername": "[concat(variables('master-vm').namespace, copyIndex())]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('master-vm').imageReference]",
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('master-vm').shared.storageAccountName,'.blob.core.windows.net/vhds/', variables('master-namespace'), copyIndex(), '-osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('master-namespace'), copyIndex(), '-nic'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(variables('master-namespace'), copyIndex(), '/script')]",
+            "apiVersion": "2016-03-30",
+            "location": "[variables('master-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('master-namespace'),'vm-creation-loop')]",
+                "count": "[variables('master-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('master-namespace'), copyIndex())]"
+            ],
+
+
+            "properties": "[variables('master-vm').installScript]"
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[concat(variables('data-namespace'), copyindex(), '-av-set')]",
+            "location": "[variables('data-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('data-namespace'),'av-loop')]",
+                "count": "[variables('avSetCount')]"
+            },
+            "properties": {
+                "platformUpdateDomainCount": 20,
+                "platformFaultDomainCount": 3
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),copyIndex(1))]",
+            "apiVersion": "2016-01-01",
+            "location": "[variables('data-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('data-namespace'),'storage-loop')]",
+                "count": "[variables('topologySettings').dataNodeStorageSettings.count]"
+            },
+            "sku": {
+                "name": "[variables('topologySettings').dataNodeStorageSettings.accountType]"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('data-namespace'), copyIndex(), '-nic')]",
+            "location": "[variables('data-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('data-namespace'),'vm-creation-loop')]",
+                "count": "[variables('data-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/loadBalancers/es-internal-lb')]",
+                "[concat('Microsoft.Compute/availabilitySets/', variables('data-namespace'), mod(copyindex(),variables('avSetCount')), '-av-set')]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountPrefix')[mod(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),add(1,div(copyIndex(),variables('nodesPerStorageAccount'))))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[concat(variables('dataNodeNicPvtIp'),copyIndex(16))]",
+                            "privateIPAllocationMethod": "Static",
+                            "subnet": {
+                                "id": "[variables('data-vm').shared.subnetId]"
+                            },
+                            "loadBalancerBackendAddressPools": "[variables('data-vm').backendPools]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(variables('data-namespace'), copyIndex())]",
+            "location": "[variables('data-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('data-namespace'),'vm-creation-loop')]",
+                "count": "[variables('data-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/availabilitySets/', variables('data-namespace'), mod(copyindex(),variables('avSetCount')), '-av-set')]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountPrefix')[mod(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),add(1,div(copyIndex(),variables('nodesPerStorageAccount'))))]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('data-namespace'), copyIndex(), '-nic')]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(variables('data-namespace'), mod(copyindex(),variables('avSetCount')), '-av-set'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[variables('data-vm').size]"
+                },
+                "osProfile": {
+                    "computername": "[concat(variables('data-vm').namespace, copyIndex())]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('data-vm').imageReference]",
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('data-vm').shared.storageAccountName,'.blob.core.windows.net/vhds/', variables('data-namespace'), copyIndex(), '-osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "datadisk1",
+                            "diskSizeGB": "[variables('topologySettings').dataNodeStorageSettings.diskSize]",
+                            "lun": 0,
+                            "vhd": {
+                                "uri": "[concat('http://',variables('storageAccountPrefix')[mod(div(copyIndex(),variables('topologySettings').dataNodeStorageSettings.nodesPerStorageAccount),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),add(1,div(copyIndex(),variables('topologySettings').dataNodeStorageSettings.nodesPerStorageAccount)), '.blob.core.windows.net/vhd/', variables('data-namespace'), copyindex(),'-data-disk1' ,'.vhd')]"
+                            },
+                            "caching": "None",
+                            "createOption": "Empty"
+                        },
+                        {
+                            "name": "datadisk2",
+                            "diskSizeGB": "[variables('topologySettings').dataNodeStorageSettings.diskSize]",
+                            "lun": 1,
+                            "vhd": {
+                                "uri": "[concat('http://',variables('storageAccountPrefix')[mod(div(copyIndex(),variables('topologySettings').dataNodeStorageSettings.nodesPerStorageAccount),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(div(copyIndex(),variables('nodesPerStorageAccount')),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),add(1,div(copyIndex(),variables('topologySettings').dataNodeStorageSettings.nodesPerStorageAccount)), '.blob.core.windows.net/vhd/', variables('data-namespace'), copyindex(),'-data-disk2' ,'.vhd')]"
+                            },
+                            "caching": "None",
+                            "createOption": "Empty"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('data-namespace'), copyIndex(), '-nic'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(variables('data-namespace'), copyIndex(), '/script')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('data-vm').shared.location]",
+            "copy": {
+                "name": "[concat(variables('data-namespace'),'vm-creation-loop')]",
+                "count": "[variables('data-vm').count]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('data-namespace'), copyIndex())]"
+            ],
+            "properties": "[variables('data-vm').installScript]"
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('securityGroupName')]",
+            "location": "[variables('commonVmSettings').location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "SSH",
+                        "properties": {
+                            "description": "Allows inbound SSH traffic from anyone",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "[variables('ubuntusettings').managementPort]",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "Kibana",
+                        "properties": {
+                            "description": "Allows inbound Kibana HTTP traffic from anyone",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "5601",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIpName')]",
+            "location": "[variables('commonVmSettings').location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat('kb-', uniqueString(resourceGroup().id))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('kibana-nicName')]",
+            "location": "[variables('commonVmSettings').location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIpName'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('securityGroupName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[variables('kibanaPrivateIPAddress')]",
+                            "privateIPAllocationMethod": "Static",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIpName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnetId')]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('securityGroupName'))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('kibana-nameSpace')]",
+            "location": "[variables('commonVmSettings').location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('kibana-nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computername": "[variables('kibana-computername')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('ubuntuSettings').imageReference]",
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat('http://', variables('commonVmSettings').storageAccountName,'.blob.core.windows.net/vhds/', variables('kibana-nameSpace'), '-osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('kibana-nicName'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(variables('kibana-nameSpace'), '/script')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('commonVmSettings').location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('kibanaVmname'))]"
+            ],
+            "properties": "[variables('ubuntuSettings').extensionSettings.kibana]"
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('networkInterfacesclientName')]",
+            "apiVersion": "2016-03-30",
+            "location": "[variables('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[variables('clientPrivateIPAddress')]",
+                            "privateIPAllocationMethod": "Static",
+                            "subnet": {
+                                "id": "[variables('subnetId')]"
+                            }
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableIPForwarding": false
+            }
+            ,
+            "dependsOn": [
+               "[concat('Microsoft.Network/virtualNetworks/', variables('networkSettings').name)]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('virtualMachinesNameClient')]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D1"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "16.04.0-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http', '://',  variables('commonVmSettings').storageAccountName, '.blob.core.windows.net', concat('/vhds/', variables('virtualMachinesNameClient'),'-osdisk.vhd'))]"
+                        },
+                        "caching": "ReadWrite"
+                    }
+                },
+                "osProfile": {
+                    "computerName": "[variables('virtualMachinesNameClient')]",
+                    "adminUsername": "[parameters('clientAdminUsername')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false
+                    },
+                    "secrets": [],
+                    "adminPassword": "[parameters('clientAdminPassword')]"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfacesClientName'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [],
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('commonVmSettings').storageAccountName)]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfacesClientName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(variables('virtualMachinesNameClient'),'/',variables('customScriptClientName'))]",
+            "apiVersion": "2016-03-30",
+            "location": "[variables('location')]",
+            "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                         "[concat(variables('templateBaseUrl'), 'scripts/filebeat.sh')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "sh filebeat.sh"
+                }
+            },
+            "resources": [],
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('virtualMachinesNameClient'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "elasticServerIP":{
+            "type": "string",
+            "value": "[parameters('vNetLoadBalancerIp')]"
+        },
+        "kibanaUserName":{
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        },
+        "kibanaPassword":{
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        },
+        "kibanaDNS":{
+            "type": "string",
+            "value": "[concat(reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')),providers('Microsoft.Network', 'publicIPAddresses').apiVersions[0]).dnsSettings.fqdn)]"
+        },
+        "clientUserName":{
+            "type": "string",
+            "value": "[parameters('clientAdminUsername')]"
+        },
+        "clientPassword":{
+            "type": "string",
+            "value": "[parameters('clientAdminPassword')]"
+        },
+        "clientPrivateIPAdress":{
+            "type": "string",
+            "value": "[variables('clientPrivateIPAddress')]"
+        },
+        "securityAdminPassword":{
+            "type": "string",
+            "value": "[parameters('securityAdminPassword')]"
+        }
+    }
+}

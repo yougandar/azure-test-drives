@@ -1,0 +1,77 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "availabilitySetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Availability Set Name"
+            }
+        },
+        "availabilitySetApiVersion": {
+            "type": "string",
+            "defaultValue": "2015-06-15",
+            "metadata": {
+                "description": "API Version for the Availability Set"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "westus",
+            "allowedValues": [
+                "Brazil South",
+                "brazilsouth",
+                "East Asia",
+                "eastasia",
+                "East US",
+                "eastus",
+                "Japan East",
+                "japaneast",
+                "Japan West",
+                "japanwest",
+                "North Central US",
+                "northcentralus",
+                "North Europe",
+                "northeurope",
+                "South Central US",
+                "southcentralus",
+                "West Europe",
+                "westeurope",
+                "West US",
+                "westus",
+                "Southeast Asia",
+                "southeastasia",
+                "Central US",
+                "centralus",
+                "East US 2",
+                "eastus2"
+            ],
+            "metadata": {
+                "description": "Deployment Location Hint: Use lowercase for creating ipaddress"
+            }
+        },
+        "tag": {
+            "type": "object",
+            "defaultValue": {
+                "key1": "key",
+                "value1": "value"
+            },
+            "metadata": {
+                "description": "Tag Values"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[parameters('availabilitySetName')]",
+            "apiVersion": "[parameters('availabilitySetApiVersion')]",
+            "location": "[parameters('location')]",
+            "tags": {
+                "[parameters('tag').key1]": "[parameters('tag').value1]"
+            },
+            "properties": {}
+        }
+    ]
+}

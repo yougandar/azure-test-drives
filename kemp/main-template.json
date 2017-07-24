@@ -1,0 +1,385 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    },
+  "variables": {
+    "apiVersion": {
+      "compute": { "virtualMachines": "2015-06-15" },
+      "network": {
+        "virtualNetworks": "2015-05-01-preview",
+        "networkInterfaces": "2015-05-01-preview",
+        "publicIPAddresses": "2015-05-01-preview",
+        "networkSecurityGroups": "2015-05-01-preview"
+      }
+    },
+    "location": "[resourceGroup().location]",
+    "publicIPAddressName": "[concat(uniqueString(resourceGroup().id),'PublicIP')]",
+    "radiusvmName": "[concat(uniqueString(resourceGroup().id), 'rad')]",
+    "webvmName": "[concat(uniqueString(resourceGroup().id), 'web')]",
+    "OSDiskName": "osdisk",
+    "dnsNameForPublicIP": "[concat('vlm', uniqueString(resourceGroup().id))]",
+    "vmName": "[concat(uniqueString(resourceGroup().id), 'VLM')]",
+    "virtualNetworkName": "[concat(uniqueString(resourceGroup().id),'VNet')]",
+    "nicName": "[concat(variables('vmName'),'Nic')]",
+    "radiusnicName": "[concat(variables('radiusvmName'),'Nic')]",
+    "webnicName": "[concat(variables('webvmName'),'Nic')]",
+    "secadminUsername": "kmpnimda",
+    "secadminPassword": "K3mp$uper$3cr3t&",
+    "adminUsername": "bal",
+    "adminPassword": "Kemp@testdrive1",
+    "ostype": "linux",
+    "vmSize": "Standard_A1",
+    "addressPrefix": "10.0.0.0/24",
+    "subnet1Name": "mysubnet",
+    "subnet1Prefix": "10.0.0.0/24",
+    "storageAccountType": "Standard_LRS",
+    "StorageAccountName": "[concat(variables('dnsNameForPublicIP'),'store')]",
+    "vmStorageAccountContainerName": "vhds",
+    "publicIPAddressType": "Dynamic",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+    "networkSecurityGroupName": "SecurityGroup",
+    "radosDiskUrl": "https://kemptestdrivevhd.blob.core.windows.net/images/TDRadius.vhd",
+    "webosDiskUrl": "https://kemptestdrivevhd.blob.core.windows.net/images/TDWeb.vhd",
+    "imageOffer": "vlm-azure",
+    "imagePublisher": "kemptech",
+    "imageVersion": "latest",
+    "imageSKU": "freeloadmaster",
+    "imageReference": {
+  	"publisher": "[variables('imagePublisher')]",
+  	"offer": "[variables('imageOffer')]",
+  	"sku": "[variables('imageSku')]",
+  	"version": "[variables('imageVersion')]"
+      },
+     "imagePlan": {
+ 	"name": "[variables('imageSku')]",
+  	"product": "[variables('imageOffer')]",
+  	"publisher": "[variables('imagePublisher')]"
+       }
+     },
+  "resources": [
+    {
+      "apiVersion": "[variables('apiVersion').network.networkSecurityGroups]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "NetworkSecurityGroup"
+      },
+      "properties": {
+        "securityRules": [
+          {
+          "name": "wui-rule",
+          "properties": {
+          "description": "Allow WUI",
+          "protocol": "Tcp",
+          "sourcePortRange": "*",
+          "destinationPortRange": "8443",
+          "sourceAddressPrefix": "*",
+          "destinationAddressPrefix": "*",
+          "access": "Allow",
+          "priority": 100,
+          "direction": "Inbound"
+            }
+          },
+        {
+        "name": "web-rule",
+        "properties": {
+          "description": "Allow http",
+          "protocol": "Tcp",
+          "sourcePortRange": "*",
+          "destinationPortRange": "80",
+          "sourceAddressPrefix": "*",
+          "destinationAddressPrefix": "*",
+          "access": "Allow",
+          "priority": 101,
+          "direction": "Inbound"
+          }
+         }
+        ]
+      }
+    },
+{
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[toLower(variables('StorageAccountName'))]",
+            "apiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "properties": {
+                "accountType": "[variables('storageAccountType')]"
+            }
+        },
+    {
+      "apiVersion": "[variables('apiVersion').network.publicIPAddresses]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsNameForPublicIP')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion').network.virtualNetworks]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('subnet1Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          }
+        ],
+        "dhcpOptions": {
+          "dnsServers": [ "4.2.2.2" ]
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion').network.networkInterfaces]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('radiusnicName'))]",
+         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+               "PrivateIpAddress": "10.0.0.4",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion').compute.virtualMachines]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('vmName')]",
+      "plan": "[variables('imagePlan')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[variables('adminUsername')]",
+          "adminPassword": "[variables('adminPassword')]"
+        },
+        "storageProfile": {
+	"imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[variables('imageSKU')]",
+            "version": "[variables('imageVersion')]"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[toLower(concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('StorageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),'.vhd'))]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+         }
+       ]
+
+     }
+, 
+    "diagnosticsProfile": {
+          "bootDiagnostics": {
+             "enabled": "false"
+            }
+       }
+   }
+ 
+ },
+{
+      "apiVersion": "[variables('apiVersion').network.networkInterfaces]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('radiusnicName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "PrivateIpAddress": "10.0.0.5",
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+             }
+           }
+          ]
+        }
+      },
+    {
+      "apiVersion": "[variables('apiVersion').compute.virtualMachines]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('radiusvmName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('radiusnicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('radiusvmName')]",
+          "adminUsername": "[variables('secadminUsername')]",
+          "adminPassword": "[variables('secadminPassword')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "name": "[concat(variables('radiusvmName'),'-osDisk')]",
+            "osType": "[variables('osType')]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "image": {
+              "uri": "[variables('radosDiskUrl')]"
+            },
+            "vhd": {
+              "uri": "[toLower(concat('https://kemptestdrivevhd.blob.core.windows.net/', variables('dnsNameForPublicIP'), '/', 'raddisk', '.vhd'))]"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('radiusnicName'))]"
+            }
+          ]
+        }
+      }
+   },
+{
+      "apiVersion": "[variables('apiVersion').network.networkInterfaces]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(variables('webnicName'), copyindex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "nicLoop",
+        "count":2
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+         "[concat('Microsoft.Network/networkInterfaces/', variables('radiusnicName'))]",
+         "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "PrivateIpAddress": "[concat('10.0.0.',copyindex(10))]",
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+             }
+           }
+          ]
+        }
+      },
+    {
+      "apiVersion": "[variables('apiVersion').compute.virtualMachines]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(variables('webvmName'), copyindex())]",
+      "location": "[resourceGroup().location]",
+     "copy": {
+        "name": "virtualMachineLoop",
+        "count":2
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('webnicName'), copyIndex())]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('webvmName'), copyIndex())]",
+          "adminUsername": "[variables('secadminUsername')]",
+          "adminPassword": "[variables('secadminPassword')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "name": "[concat(variables('webvmName'),'-osDisk')]",
+            "osType": "[variables('osType')]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "image": {
+              "uri": "[variables('webosDiskUrl')]"
+            },
+            "vhd": {
+              "uri": "[toLower(concat('https://kemptestdrivevhd.blob.core.windows.net/', variables('dnsNameForPublicIP'), '/','webdisk', copyindex(), '.vhd'))]"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat (variables('webnicName'), copyindex()))]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+
+"Host Name": {
+    "type": "string",
+    "value": "[concat('https://', variables('dnsNameForPublicIP'), '.eastus.cloudapp.azure.com:8443')]"
+  },
+  "User Name": {
+    "type": "string",
+    "value": "[variables('adminUsername')]"
+  },
+  "Password": {
+    "type": "string",
+    "value": "[variables('adminPassword')]"
+  }
+ }
+}

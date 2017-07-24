@@ -1,0 +1,22 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+"parameters": {
+      "location": {
+			"value": "West US"
+    },
+    "networkApiVersion": {
+      "value": "2015-05-01"
+    },
+	
+	"networkSecurityGroupName": {
+       "value": "networkSecurityGroup"
+    },
+	"tag": {
+			"value": {
+				"key1": "Virtual Machine",
+				"value1": "Hortonworks"
+      }
+    }
+  }
+}

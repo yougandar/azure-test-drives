@@ -1,0 +1,546 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "West US",
+            "allowedValues": [
+                "Brazil South",
+                "East Asia",
+                "East US",
+                "Japan East",
+                "Japan West",
+                "North Central US",
+                "North Europe",
+                "South Central US",
+                "West Europe",
+                "West US",
+                "Southeast Asia",
+                "Central US",
+                "East US 2"
+            ],
+            "metadata": {
+                "description": "Virtual Network and Subnets Deployment Location"
+            }
+        },
+        "publicIPdnsPrefixBarracuda": {
+            "type": "string",
+            "defaultValue": "barracudadns",
+            "metadata": {
+                "description": "Public IP DNS Prefix"
+            }
+        },
+        "publicIPdnsPrefixBadstore": {
+            "type": "string",
+            "defaultValue": "badstoredns",
+            "metadata": {
+                "description": "Public IP DNS Prefix"
+            }
+        },
+        "username": {
+            "type": "string",
+            "defaultValue": "suser",
+            "metadata": {
+                "description": "barracuda username"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "Password@123",
+            "metadata": {
+                "description": "Password of Barracuda GUI login"
+            }
+        },
+        "storageContainerName": {
+            "type": "string",
+            "defaultValue": "sr",
+            "metadata": {
+                "description": "storage container name"
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "bsrt",
+            "metadata": {
+                "description": "storage account name"
+            }
+        }
+    },
+    "variables": {
+        "tag": {
+            "value1": "barracudaWAF"
+        },
+         "baseUrl": "https://aztdrepo.blob.core.windows.net/barracuda-waf",
+        "StorageUrl": "[concat(variables('baseurl'),'/nested/storage.json')]",
+        "PublicipUrl": "[concat(variables('baseurl'),'/nested/publicip.json')]",
+        "BarracudaNetworkinterfaceUrl": "[concat(variables('baseurl'),'/nested/barracuda-nic.json')]",
+        "BadstoreNetworkinterfaceUrl": "[concat(variables('baseurl'),'/nested/badstore-nic.json')]",
+        "BadstoreNetworksecurityUrl": "[concat(variables('baseurl'),'/nested/bad-nsg.json')]",
+        "BarracudaNetworksecuritygroupUrl": "[concat(variables('baseurl'),'/nested/bwaf-network-security-group.json')]",
+        "VnetUrl": "[concat(variables('baseurl'),'/nested/bwaf-vnet-subnet.json')]",
+        "BarracudaVirtualmachineUrl": "[concat(variables('baseurl'),'/nested/vm-with-plan.json')]",
+        "BadstoreVMUrl": "[concat(variables('baseurl'),'/nested/badstore-vm.json')]",
+        "badStoreAdminUsername": "badstoreuser",
+        "vnetName": "bwaf-virtualnetwork",
+        "Barracudausername": "admin",
+        "vnetAddressPrefix": "10.0.0.0/16",
+        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
+        "subnet1Name": "subnet1-waf",
+        "subnet1Prefix": "10.0.1.0/24",
+        "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+        "subnet2Name": "subnet2-badstore",
+        "subnet2Prefix": "10.0.2.0/24",
+        "subnet2Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet2Name'))]",
+        "subnet3Name": "subnet3-bvm",
+        "subnet3Prefix": "10.0.3.0/24",
+        "subnet3Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet3Name'))]",
+        "networkApiVersion": "2015-06-15",
+        "storageApiVersion": "2015-06-15",
+        "computeApiVersion": "2015-06-15",
+        "uniqueString": "[uniquestring(resourceGroup().id)]",
+        "storageAccountName": "[concat(parameters('storageAccountName'),uniqueString(resourceGroup().id))]",
+        "publicIPAddressName": "barracudapublicIPAddress",
+        "BadstorePIPAddressName": "badstorepublicIPAddress",
+        "networkSecurityGroupName": "barracuda-nsg",
+        "badstorenetworkSecurityGroupName": "bad-nsg",
+        "networkInterfaceName": "barracuda-nic",
+        "badstorenetworkInterfaceName": "badstore-nic",
+        "vmName": "barracudawaf-vm",
+        "virtualMachineName": "badstore-vm",
+        "vmSize": "Standard_A2",
+        "badstorevmSize": "Standard_A2",
+        "imagePublisher": "barracudanetworks",
+        "imageOffer": "waf",
+        "imageSKU": "hourly",
+        "imageVersion": "latest",
+        "vmStorageAccountContainerName": "vhds",
+        "storageAccountType": "Standard_LRS",
+        "storageContainer": "[concat(parameters('storageContainerName'),uniqueString(resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "name": "vnet",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('VnetUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "vnetName": {
+                        "value": "[variables('vnetName')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressPrefix')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('subnet1Name')]"
+                    },
+                    "subnet1Prefix": {
+                        "value": "[variables('subnet1Prefix')]"
+                    },
+                    "subnet2Name": {
+                        "value": "[variables('subnet2Name')]"
+                    },
+                    "subnet2Prefix": {
+                        "value": "[variables('subnet2Prefix')]"
+                    },
+                    "subnet3Name": {
+                        "value": "[variables('subnet3Name')]"
+                    },
+                    "subnet3Prefix": {
+                        "value": "[variables('subnet3Prefix')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "vnet",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "storage",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('StorageUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "storageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "storageApiVersion": {
+                        "value": "[variables('storageApiVersion')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccountType')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "storageac",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BarracudaPublicIP",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "vnet"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('PublicipUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[concat(parameters('publicIPdnsPrefiXBarracuda'),variables('uniqueString'))]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "BarracudaPIP",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BarracudaNsg",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "vnet"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BarracudaNetworksecuritygroupUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('networkSecurityGroupName')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Barracuda-NSG",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BarracudaNic",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "BarracudaNsg",
+                "BarracudaPublicIP"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BarracudaNetworkinterfaceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('networkInterfaceName')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('networkSecurityGroupName')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('publicIPAddressName')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnet1Ref')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Barracuda-NIC",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BarracudaVirtualMachine",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "BarracudaNic"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BarracudaVirtualmachineUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "computeApiVersion": {
+                        "value": "[variables('computeApiVersion')]"
+                    },
+                    "vmName": {
+                        "value": "[variables('vmName')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('vmSize')]"
+                    },
+                    "adminUsername": {
+                        "value": "[parameters('username')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "vmStorageAccountContainerName": {
+                        "value": "[variables('vmStorageAccountContainerName')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('networkInterfaceName')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "virtual machine ",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BadstorepublicIP",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "vnet"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('PublicipUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('BadstorePIPAddressName')]"
+                    },
+                    "publicIPdnsPrefix": {
+                        "value": "[concat(parameters('publicIPdnsPrefixBadstore'),variables('uniqueString'))]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "BadstorePIP ",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BadstoreNsg",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "vnet"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BadstoreNetworksecurityUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('badstorenetworkSecurityGroupName')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Badstore-NSG",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "Badstorenic",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "vnet",
+                "BadstorepublicIP",
+                "BadstoreNsg"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BadstoreNetworkinterfaceUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "networkApiVersion": {
+                        "value": "[variables('networkApiVersion')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('badstorenetworkInterfaceName')]"
+                    },
+                    "networkSecurityGroupName": {
+                        "value": "[variables('badstorenetworkSecurityGroupName')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('BadstorePIPAddressName')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnet2Ref')]"
+                    },
+                    "tag": {
+                        "value": {
+                            "key1": "Badstore-NIC",
+                            "value1": "[variables('tag').value1]"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "BadStoreVM",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "Badstorenic"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('BadstoreVMUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "West US"
+                    },
+                    "adminUsername": {
+                        "value": "[variables('badStoreAdminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "virtualMachineName": {
+                        "value": "[variables('virtualMachineName')]"
+                    },
+                    "virtualMachineSize": {
+                        "value": "[variables('badstorevmSize')]"
+                    },
+                    "networkInterfaceName": {
+                        "value": "[variables('badstorenetworkInterfaceName')]"
+                    },
+                    "storageContainer": {
+                        "value": "[variables('storageContainer')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "Barracuda Access URL": {
+            "type": "string",
+            "value": "[concat('http://', parameters('publicIPdnsPrefixBarracuda'), variables('uniqueString'), '.', resourceGroup().location, '.cloudapp.azure.com:8000')]"
+        },
+        "Barracuda PrivateIPAddress": {
+            "type": "string",
+            "value": "[reference('BarracudaNic').outputs.BarracudaPrivateIPAddress.value]"
+        },
+        "Badstore PrivateIPAddress": {
+            "type": "string",
+            "value": "[reference('Badstorenic').outputs.BadstorePrivateIPAddress.value]"
+        },
+        "Barracuda AdminUsername": {
+            "value": "[variables('Barracudausername')]",
+            "type": "string"
+        },
+        "Barracuda AdminPassword": {
+            "value": "[parameters('adminPassword')]",
+            "type": "string"
+        }
+    }
+}
