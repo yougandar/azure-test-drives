@@ -1,0 +1,36 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "eastus"
+        },
+        "clusterVNetAddressSpace": {
+            "value": "10.0.0.0/16"
+        },
+        "clusterVNetSubnetName": {
+            "value": "default"
+        },
+        "clusterVNetSubnetAddressRange": {
+            "value": "10.0.0.0/24"
+        },
+        "clusterType": {
+            "value": "hadoop"
+        },
+        "clusterLoginUserName": {
+            "value": "dgadmin"
+        },
+        "sshUserName": {
+            "value": "dgadmin"
+        },
+        "edgeNodeVirtualMachineName": {
+            "value": "node"
+        },
+        "edgeNodeVirtualMachineSize": {
+            "value": "Standard_D1"
+        },
+        "edgeNodeSetupScriptUri": {
+            "value": "https://s3.amazonaws.com/dgsecure/azure/SetupDgSecure.sh"
+        }
+    }
+}
