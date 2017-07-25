@@ -1,0 +1,21 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "value": "datasunrise"
+        },
+        "adminPassword": {
+            "value": "admin@123"
+        },
+        "datasunrisePassword": {
+            "value": "datasunrise@123"
+        },
+        "postgrePassword": {
+            "value": "postgre@123"
+        },
+        "vmSize": {
+            "value": "Standard_A2"
+        }
+    }
+}
