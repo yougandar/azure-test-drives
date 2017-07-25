@@ -1,0 +1,27 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUserName": {
+            "value": "mdbe"
+        },
+        "sshKey": {
+            "value": "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAheEUCYH618f7DWa7Hjxivxshj3nejArm0HRMlb1Gx+/DRtufFq5zCiEyKlG6CC15eVmsluqUzNVJdy79fdagEar1zBchNJip0Qq92HYRYA2+r1ctk/hjrURFTe4md3z2j2bM/a8XGqr4+HFByeD8573+w1yokHQlW8N0UoAKy1tcZgN8iL/yxCaVysNHAqP7OJY4MR0b+A7I+r8Msof2d9EETfKL+J6p7wGlwW+/G0fvMK+ZGbCUxrRPdhkDVDabqpQg61etlcXRNSq5bXtHGTQEcOCZn+CVSJy7CiUj9qHSicZa4s5afx+20Ogj3d1BV1+MSwd88QzV9fk7J2CHtw== rsa-key-20170110"
+        },
+        "appDatabase": {
+            "value": "mydb"
+        },
+        "appUserName": {
+            "value": "myapp"
+        },
+        "appPassword": {
+            "value": "Mariadb123"
+        },
+        "clientVmUsername": {
+            "value": "wpuser"
+        },
+        "clientVmPassword": {
+            "value": "Wpassword123"
+        }
+    }
+}
