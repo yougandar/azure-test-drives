@@ -1,0 +1,15 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "tag": {
+            "value": {
+                "key1": "Component",
+                "value1": "F5cloudtry"
+            },
+            "sessionId": {
+                "value": "eebcf92a-754b-43b2-84c7-067ed0915083"
+            }
+        }
+    }
+}
