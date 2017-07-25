@@ -1,0 +1,42 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "_artifactsLocation": {
+            "value": "https://aztdrepo.blob.core.windows.net/redhatopenshift"
+        },
+        "masterVmSize": {
+            "value": "Standard_DS2_v2"
+        },
+        "nodeVmSize": {
+            "value": "Standard_DS2_v2"
+        },
+        "openshiftClusterPrefix": {
+            "value": "openshift"
+        },
+        "adminUsername": {
+            "value": "testuser"
+        },
+        "cloudAccessUsername": {
+            "value": ""
+        },
+        "cloudAccessPassword": {
+            "value": ""
+        },
+        "cloudAccessPoolId": {
+            "value": ""
+        },
+        "sshPublicKey": {
+            "value": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8T46pA0uM64Yeis6DO9Q01g8lfvHMe4I4kpRW9u4QYiDL6jctLw6+Y1VHtROIYvuN4AHqBR7hQgAX3256Cu90EhmygWZglsVcKUBhir25NRuRM4qBcA+k1oBJt0EOKXZRDw6Efb/wLEcDtP2jnx7dOb9C7NewNNPCAEIOIvwfLechHAC7VcTe6cvqQ37r8TJpMz7WHZYhS4eyCajZt3KLbi+XciEWbucXISLPL4h+9RpVAkybmCkIfB08lX/wQ+d2O7Q0hOOLB6gU/49w/fkBmEjz13pRQcB5gV9ULbHIkP6Wn3mXYXGZm6rwzDHSC1BcxZy1erKqekhHtTMqZ6DZ imported-openssh-key"
+        },
+        "keyVaultResourceGroup": {
+            "value": "bbtestos6"
+        },
+        "keyVaultName": {
+            "value": "bbopenshiftkeyvault6"
+        },
+        "keyVaultSecret": {
+            "value": "privatekey6"
+        }
+    }
+}
