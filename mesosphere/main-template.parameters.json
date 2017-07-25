@@ -1,0 +1,30 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "agentCount": {
+            "value": 6
+        },
+        "agentEndpointDNSNamePrefix": {
+            "value": "meso"
+        },
+        "linuxAdminPassword": {
+            "value": "TestDriveUser123"
+        },
+        "linuxAdminUsername": {
+            "value": "mesos"
+        },
+        "masterEndpointDNSNamePrefix": {
+            "value": "masterend"
+        },
+        "sshRSAPublicKey": {
+            "value": "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAu3QV2um0FdjsDCaDpXOeYrXIZVSL7qYGLZGoz1IsLUjh/IrlO5qUSUTNZ+AOyOgJomzuVyb3klrYSpL8b0+C2Og6kF9dK/qlni6PeTj9cxQndshJLWidZFOt2FGWDG6jBUcOveNi4XqBpBWSbNbk0ugG9OfNGOOh4o1DY0ug/iZhSk+/JdwtK2DMrN1iNi3Qq5f76odZHSux3hXW0E7/GtG1jZN5RUyFzVJJE7XS0pEWTWtmTwMne/1EyS4SqkWMJVlbk/XTDuU7yuU6ZpCoWOOr2+BCI98TVPJHK42bsw9gc+PiXne9IHScWNVmamcqw9+khiWl+tNzyPwbfhp9UQ== rsa-key-20170106"
+        },
+        "jumpboxVMAdminUsername": {
+            "value": "mesos"
+        },
+        "jumpboxVMAdminPassword": {
+            "value": "TestDriveUser123"
+        }
+    }
+}
