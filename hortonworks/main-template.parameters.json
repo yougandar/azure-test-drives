@@ -1,0 +1,33 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "value": "hortonuser"
+        },
+        "adminPassword": {
+            "value": "Sysga1n4205!"
+        },
+        "vmName": {
+            "value": "sysgainsandbox"
+        },
+        "vmStorageAccountContainerName": {
+            "value": "vhds"
+        },
+        "publicIPAddressName": {
+            "value": "sandpubip"
+        },
+        "tag": {
+            "value": {
+                "key1": "deploymentfile",
+                "value1": "hortonworks"
+            }
+        },
+        "imageVersion": {
+            "value": "latest"
+        },
+        "location": {
+            "value": "centralus"
+        }
+    }
+}
