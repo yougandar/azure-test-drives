@@ -1,0 +1,84 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUserName": {
+            "value": "cloudera"
+        },
+        "adminPassword": {
+            "value": "Cloudera@123"
+        },
+        "cmUsername": {
+            "value": "cloudera"
+        },
+        "cmPassword": {
+            "value": "Cloudera@123"
+        },
+        "storageAccountPrefix": {
+            "value": "cloudera"
+        },
+        "dnsNamePrefix": {
+            "value": "cloudera"
+        },
+        "masterStorageAccountType": {
+            "value": "Premium_LRS"
+        },
+        "workerStorageAccountType": {
+            "value": "Standard_LRS"
+        },
+        "virtualNetworkName": {
+            "value": "clouderavnet"
+        },
+        "vnetNewOrExisting": {
+            "value": "new"
+        },
+        "virtualNetworkRGName": {
+            "value": ""
+        },
+        "subnetName": {
+            "value": "clouderasubnet"
+        },
+        "addressPrefix": {
+            "value": "10.3.0.0/16"
+        },
+        "subnetPrefix": {
+            "value": "10.3.0.0/16"
+        },
+        "masterNodeIPAddress": {
+            "value": "10.3.0.4"
+        },
+        "dataNodeIPOffSetFromMaster": {
+            "value": 5
+        },
+        "tshirtSize": {
+            "value": "Eval"
+        },
+        "numberOfDataNodes": {
+            "value": 3
+        },
+        "vmSize": {
+            "value": "Standard_DS14"
+        },
+        "company": {
+            "value": "Company"
+        },
+        "emailAddress": {
+            "value": "email@yourcompany.com"
+        },
+        "businessPhone": {
+            "value": "123456789"
+        },
+        "firstName": {
+            "value": "FirstName"
+        },
+        "lastName": {
+            "value": "LastName"
+        },
+        "jobRole": {
+            "value": "Administrator"
+        },
+        "jobFunction": {
+            "value": "Analytics / Business Intelligence"
+        }
+    }
+}

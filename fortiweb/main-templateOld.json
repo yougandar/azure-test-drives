@@ -1,0 +1,481 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "fortiwebadmin",
+            "metadata": {
+                "description": "Username for the Virtual Machine."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "Solojava@1910",
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
+        },
+        "FWVMName": {
+            "type": "string",
+            "defaultValue": "fwvm",
+            "metadata": {
+                "description": "Name for FortiWeb virtual appliance."
+            }
+        }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "virtualNetworkName": "fortiwebvnet",
+        "storageAccName": "[concat('safortiwebtest',substring(uniqueString(resourceGroup().id),4,9))]",
+        "vnetAddressPrefix": "172.19.0.0/16",
+        "Subnet1Prefix": "172.19.0.0/24",
+        "Subnet1Name": "sub1",
+        "Subnet2Prefix": "172.19.1.0/24",
+        "Subnet2Name": "sub2",
+        "FWpIPAddressName": "fwpip",
+        "FWpIPAddressType": "Dynamic",
+        "FGProtectedAddress": "172.19.1.5",
+        "FGPubFacingAddress": "172.19.0.4",
+        "StorageAccountType": "Standard_LRS",
+        "VirtualMachineSize": "Standard_DS2",
+        "webgoatAdminUsername": "wgadmin",
+        "webgoatnicName": "webgoat-nic",
+        "webgoatnsgName": "webgoat-nsg",
+        "webgoatpIPType": "Dynamic",
+        "webgoatpIPName": "webgoatip",
+        "uniqueWebgoatDNS": "[concat('webgoat',substring(uniqueString(resourceGroup().id),4,9))]",
+        "FWpIPDnsPrefix": "[concat('fortiweb',substring(uniqueString(resourceGroup().id),4,9))]",
+        "webgoatVMName": "webgoat-vm",
+        "webgoatvmSize": "Standard_DS1",
+        "imagePublisher": "Canonical",
+        "imageOffer": "UbuntuServer",
+        "imageSKU": "16.10",
+        "imageVersion": "latest",
+        "typeHandlerVersion": "1.4",
+        "webgoatvmExtensionName": "webgoatext",
+        "installCommand": "sh docker-install.sh",
+        "apiVersion": "2015-06-15",
+        "compute_VM_fg1_Name": "[parameters('FWVMName')]",
+        "network_NIC_fg11_Name": "[concat(parameters('FWVMName'),'Nic0')]",
+        "network_NIC_fg11_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg11_Name'))]",
+        "network_NIC_fg12_Name": "[concat(parameters('FWVMName'),'Nic1')]",
+        "network_NIC_fg12_Id": "[resourceId('Microsoft.Network/networkInterfaces',variables('network_NIC_fg12_Name'))]",
+        "compute_AvailabilitySet_FG_Name": "[concat(parameters('FWVMName'),'AvailSet')]",
+        "compute_AvailabilitySet_FG_Id": "[resourceId('Microsoft.Compute/availabilitySets', variables('compute_AvailabilitySet_FG_Name'))]",
+        "templateUrl": "https://aztdrepo.blob.core.windows.net/fortiweb/",
+        "webgoatvmsetupurl": "[concat(variables('templateUrl'),'nested/webgoat-vm.json')]",
+        "webgoatnicSetupurl": "[concat(variables('templateUrl'),'nested/webgoat-nic.json')]",
+        "webgoatpublicIpSetupUrl": "[concat(variables('templateUrl'),'nested/webgoat-publicip.json')]",
+        "webgoatvmExesetupurl": "[concat(variables('templateUrl'),'nested/webgoat-extention.json')]",
+        "customScriptsUrl": "[concat(variables('templateUrl'),'scripts/docker-install.sh')]",
+        "FWStorageAccountSetupURL": "[concat(variables('templateUrl'),'nested/fortiweb-storageAccount.json')]",
+        "FWPublicIPSetupURL": "[concat(variables('templateUrl'),'nested/fortiweb-publicIP.json')]",
+        "FWVirtualNetworkSetupURL": "[concat(variables('templateUrl'),'nested/vnet.json')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('compute_AvailabilitySet_FG_Name')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "location": "[variables('location')]"
+        },
+        {
+            "name": "FWSettingUpStorageAccount",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('FWStorageAccountSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[variables('storageAccountType')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccName')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "SettingUpVirtualNetwork",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('FWVirtualNetworkSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "VNetName": {
+                        "value": "[Variables('virtualNetworkName')]"
+                    },
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "vnetAddressPrefix": {
+                        "value": "[variables('vnetAddressPrefix')]"
+                    },
+                    "subnet1Name": {
+                        "value": "[variables('Subnet1Name')]"
+                    },
+                    "subnet1AddressPrefix": {
+                        "value": "[variables('Subnet1Prefix')]"
+                    },
+                    "subnet2Name": {
+                        "value": "[variables('Subnet2Name')]"
+                    },
+                    "subnet2AddressPrefix": {
+                        "value": "[variables('Subnet2Prefix')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "FWSettingUpPublicIPandFollowing",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "SettingUpVirtualNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('FWPublicIPSetupURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "publicIPAddressName": {
+                        "value": "[variables('FWpIPAddressName')]"
+                    },
+                    "publicIPAddressType": {
+                        "value": "[variables('FWpIPAddressType')]"
+                    },
+                    "dnsName": {
+                        "value": "[variables('FWpIPDnsPrefix')]"
+                    },
+                    "VMName": {
+                        "value": "[parameters('FWVMName')]"
+                    },
+                    "FGPubFacingAddress": {
+                        "value": "[variables('FGPubFacingAddress')]"
+                    },
+                    "subnet1Ref": {
+                        "value": "[reference('Microsoft.Resources/deployments/SettingUpVirtualNetwork', '2015-01-01').outputs.subnet1ID.value]"
+                    },
+                    "network_NIC_fg11_Name": {
+                        "value": "[variables('network_NIC_fg11_Name')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[variables('network_NIC_fg12_Name')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "SettingUpVirtualNetwork"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('FGProtectedAddress')]",
+                            "subnet": {
+                                "id": "[reference('Microsoft.Resources/deployments/SettingUpVirtualNetwork', '2015-01-01').outputs.subnet2ID.value]"
+                            }
+                        }
+                    }
+                ],
+                "enableIPForwarding": true
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('compute_VM_fg1_Name')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "location": "[variables('location')]",
+            "plan": {
+                "name": "fortinet_fw-vm",
+                "publisher": "fortinet",
+                "product": "fortinet_fortiweb-vm_v5"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'FWSettingUpPublicIPandFollowing')]",
+                "[concat('Microsoft.Network/networkInterfaces/',variables('network_NIC_fg12_Name'))]",
+                "[concat('Microsoft.Resources/deployments/', 'FWSettingUpStorageAccount')]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('VirtualMachineSize')]"
+                },
+                "availabilitySet": {
+                    "id": "[variables('compute_AvailabilitySet_FG_Id')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('compute_VM_fg1_Name')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": false,
+                        "storageUri": "[concat('http://', variables('storageAccName'), '.blob.core.windows.net')]"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "fortinet",
+                        "offer": "fortinet_fortiweb-vm_v5",
+                        "sku": "fortinet_fw-vm",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('compute_VM_fg1_Name'),'-osDisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage",
+                        "vhd": {
+                            "uri": "[concat('http://',variables('storageAccName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg1_Name'), '-osdisk', '.vhd')]"
+                        }
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('compute_VM_fg1_Name'),'-dataDisk')]",
+                            "diskSizeGB": 30,
+                            "lun": 0,
+                            "vhd": {
+                                "uri": "[concat('http://',variables('storageAccName'),'.blob.core.windows.net/vhds/', variables('compute_VM_fg1_Name'), '-datadisk', '.vhd')]"
+                            },
+                            "createOption": "Empty"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[variables('network_NIC_fg11_Id')]"
+                        },
+                        {
+                            "properties": {
+                                "primary": false
+                            },
+                            "id": "[variables('network_NIC_fg12_Id')]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "webgoatPublicIpSetup",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('webgoatpublicIpSetupUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "publicIpName": {
+                        "value": "[variables('webgoatpIPName')]"
+                    },
+                    "uniqueNamePrefix": {
+                        "value": "[variables('uniqueWebgoatDNS')]"
+                    },
+                    "publicIpType": {
+                        "value": "[variables('webgoatpIPType')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[variables('webgoatnsgName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2016-03-30",
+            "location": "[variables('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-ssh",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "webapp-inbound",
+                        "properties": {
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "8080",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1010,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "webgoatNICSetup",
+            "dependsOn": [
+                "SettingUpVirtualNetwork",
+                "[concat('Microsoft.Network/networkSecurityGroups/',variables('webgoatnsgName'))]",
+                "webgoatpublicIpSetup"
+            ],
+            "apiVersion": "2016-09-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('webgoatnicSetupurl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "nicName": {
+                        "value": "[variables('webgoatnicName')]"
+                    },
+                    "nsgName": {
+                        "value": "[variables('webgoatnsgName')]"
+                    },
+                    "publicIpName": {
+                        "value": "[variables('webgoatpIPName')]"
+                    },
+                    "subnetRef": {
+                        "value": "[reference('Microsoft.Resources/deployments/SettingUpVirtualNetwork', '2015-01-01').outputs.subnet2ID.value]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "vmsetup",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "webgoatNICSetup",
+                "FWSettingUpStorageAccount"
+            ],
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('webgoatvmsetupurl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "imagePublisher": {
+                        "value": "[variables('imagePublisher')]"
+                    },
+                    "imageOffer": {
+                        "value": "[variables('imageOffer')]"
+                    },
+                    "vmSize": {
+                        "value": "[variables('webgoatvmSize')]"
+                    },
+                    "imageSKU": {
+                        "value": "[variables('imageSKU')]"
+                    },
+                    "imageVersion": {
+                        "value": "[variables('imageVersion')]"
+                    },
+                    "vmName": {
+                        "value": "[variables('webgoatVMName')]"
+                    },
+                    "adminUsername": {
+                        "value": "[variables('webgoatAdminUsername')]"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "storageAccName": {
+                        "value": "[variables('storageAccName')]"
+                    },
+                    "nicName": {
+                        "value": "[variables('webgoatnicName')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "extSetup",
+            "dependsOn": [
+                "vmsetup"
+            ],
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('webgoatvmExesetupurl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[variables('location')]"
+                    },
+                    "vmName": {
+                        "value": "[variables('webgoatVMName')]"
+                    },
+                    "vmExtensionName": {
+                        "value": "[variables('webgoatvmExtensionName')]"
+                    },
+                    "typeHandlerVersion": {
+                        "value": "[variables('typeHandlerVersion')]"
+                    },
+                    "customScriptsUrl": {
+                        "value": "[variables('customScriptsUrl')]"
+                    },
+                    "commandToExecute": {
+                        "value": "[variables('installCommand')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "FortiWebDNS": {
+            "type": "string",
+            "value": "[concat('http://',variables('FWpIPDnsPrefix'),'.', tolower(replace(variables('location'),' ','')), '.cloudapp.azure.com')]"
+        },
+        "FWAdminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        },
+        "FWAdminPassword": {
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        }
+    }
+}

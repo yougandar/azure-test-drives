@@ -1,0 +1,24 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "prefix": {
+            "value": "cvg"
+        },
+        "adminPassword": {
+            "value": "adminuser@123"
+        },
+        "customImageStorageAccountName": {
+            "value": "chefimages"
+        },
+        "customImageContainerName": {
+            "value": "system1"
+        },
+        "storageAccountTemplateBaseUrl": {
+            "value": "https://aztdrepo.blob.core.windows.net/chef-automate/arm-storage-account"
+        },
+        "virtualNetworkTemplateBaseUrl": {
+            "value": "https://aztdrepo.blob.core.windows.net/chef-automate/arm-virtual-network"
+        }
+    }
+}

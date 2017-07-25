@@ -1,0 +1,42 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "ddcLicenseKey": {
+            "value": ""
+              },
+        "ddcPassword": {
+            "value": "TestDriveUser123"
+        },
+        "ddcUsername": {
+            "value": "ddcadmin"
+             },
+        "adServicePrincipalAppID": {
+           "value": "c2f03944-b80f-420d-9c90-37f4f5ed9459"
+        },
+        "adServicePrincipalAppSecret": {
+            "value": "k7KsOwAFfwmx1LQfZLdD1EalooFFlw/UFlZlIyMCYyo="
+        },
+        "enableSystemPrune": {
+            "value": "no"
+             },
+        "managerCount": {
+           "value": 1
+            },
+        "managerVMSize": {
+            "value": "Standard_DS3"
+            },
+        "sshPublicKey": {
+            "value": "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEA3MLOkhGaNkLl1gLuExEIoyP6u/1DjbCxGzhLIccEl4UajiNE9yx8ae47+DSKpl9zi6eeI2zyn88VzJ5twkl2hQrTi5T4E36ujS4QbtmCWj1a1hj2dub7STZBkmsYmh5QUz7Nw8wbvkaJy7wrnXJ2bGRGXomyNlpOxMdlFvjeW5mFFQmwyCDpBiqkOi72NpMRfcPF/R1H0uodeqXZf+Xrvw86mz2OtnzXR8sX2r1DXFobm8NycZbhL8HszWadDi7TO9rQvUoRPkc+Q8CgCXi557cVXUbTpdCC/eJviKlKlpgZYem5Uq4wi29Qijm0Ev2EEfMahMgqNQhGagcLRWapZQ== rsa-key-20170306"
+        },
+        "swarmName": {
+            "value": "dockerswarm"
+           },
+        "workerCount": {
+            "value": 1
+            },
+        "workerVMSize": {
+            "value": "Standard_D2_v2"
+           }
+    }
+}

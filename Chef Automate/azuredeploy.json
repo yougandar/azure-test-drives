@@ -1,0 +1,183 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {
+        "prefix": "[uniqueString(resourceGroup().id)]",
+        "location": "West US",
+        "computeSettings": {
+            "computeApiVersion": "2016-04-30-preview",
+            "location": "[variables('location')]",
+            "wsVmName": "chefworkstation",
+            "chefAutoVmName": "chefautomate",
+            "imagePublisher": "chef-software",
+            "imageOffer": "chef-automate",
+            "imageSKU": "byol",
+            "imageVersion": "latest",
+            "storageAccountType": "Standard_LRS",
+            "firstname": "chefautomate",
+            "lastname": "user",
+            "orguser": "orguser",
+            "mailid": "orguser@gmail.com",
+            "customImageSubscription": "[subscription().subscriptionId]",
+            "customImageRG": "DO-NOT-DELETE-automate-marketplace-test-drive",
+            "adminUsername": "chefuser",
+            "adminPassword": "Password@123",
+            "virtualMachineSize": "Standard_DS2_v2",
+            "wsNic": "[variables('wsNic')]",
+            "chefAutoNic": "[variables('chefAutoNic')]",
+            "rubyPath": "/opt/chef-marketplace/embedded/bin/ruby",
+            "chefAutoScriptUrl1": "[concat(variables('baseUrl'), '/scripts/automate_setup.rb')]",
+            "chefAutoScriptUrl2": "[concat(variables('baseUrl'),'/scripts/chefupgrade_setup.sh')]",
+            "workstationSetupScriptUrl": "[concat(variables('baseUrl'),'/scripts/Workstation_setup.ps1')]",
+            "automateLicenseUri": ""
+        },
+        "networkSettings": {
+            "networkApiVersion": "2015-06-15",
+            "location": "[variables('location')]",
+            "wsPip": "ws-client-pip",
+            "chefAutoPip": "chefauto-pip",
+            "wsNsg": "ws-client-nsg",
+            "chefAutoNsg": "chefauto-nsg",
+            "wsNic": "[variables('wsNic')]",
+            "chefAutoNic": "[variables('chefAutoNic')]",
+            "publicIpAddressType": "Dynamic",
+            "virtualNetworkName": "chef-vnet",
+            "addressPrefix": "10.2.0.0/24",
+            "subnetName": "chef-subnet",
+            "subnetPrefix": "10.2.0.0/24",
+            "wsClientDns": "[concat('wsclient',substring(variables('prefix') ,0 ,5))]",
+            "chefAutoDns": "[concat('chefauto',substring(variables('prefix') ,0 ,5))]"
+        },
+        "deploymentApiVersion": "2015-01-01",
+        "wsNic": "ws-client-nic",
+        "chefAutoNic": "chefauto-nic",
+        "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkSettings').virtualNetworkName)]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('networkSettings').subnetName)]",
+        "baseUrl": "https://aztdrepo.blob.core.windows.net/chefautomate-testdrive",
+        "vmsWithExtensionsURL": "[concat(variables('baseUrl'), '/nested/vm.json')]",
+        "publicIPAddressesResourcesURL": "[concat(variables('baseUrl'), '/nested/pip.json')]",
+        "virtualNetworksResourcesURL": "[concat(variables('baseUrl'), '/nested/vnet.json')]",
+        "networkSecurityGroupsResourcesURL": "[concat(variables('baseUrl'), '/nested/nsg.json')]",
+        "networkInterfacesResourcesURL": "[concat(variables('baseUrl'), '/nested/nic.json')]"
+    },
+    "resources": [
+        {
+            "name": "publicIPAddressesResource",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "[variables('deploymentApiVersion')]",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[variables('publicIPAddressesResourcesURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkSettings": {
+                        "value": "[variables('networkSettings')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "virtualNetworksResource",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "[variables('deploymentApiVersion')]",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[variables('virtualNetworksResourcesURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkSettings": {
+                        "value": "[variables('networkSettings')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "networkSecurityGroupsResource",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "[variables('deploymentApiVersion')]",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[variables('networkSecurityGroupsResourcesURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkSettings": {
+                        "value": "[variables('networkSettings')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "networkInterfacesResource",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "[variables('deploymentApiVersion')]",
+            "dependsOn": [
+                "publicIPAddressesResource",
+                "virtualNetworksResource",
+                "networkSecurityGroupsResource"
+            ],
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[variables('networkInterfacesResourcesURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkSettings": {
+                        "value": "[variables('networkSettings')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnetRef')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "ChefVMsWithExtensions",
+            "apiVersion": "[variables('deploymentApiVersion')]",
+            "dependsOn": [
+                "networkInterfacesResource"
+            ],
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[variables('vmsWithExtensionsURL')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "computeSettings": {
+                        "value": "[variables('computeSettings')]"
+                    },
+                    "chefAutomatefqdn": {
+                        "value": "[reference('publicIPAddressesResource').outputs.chefAutomatefqdn.value]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "UserName": {
+            "type": "string",
+            "value": "[variables('computeSettings').adminUsername]"
+        },
+        "Password": {
+            "type": "string",
+            "value": "[variables('computeSettings').adminPassword]"
+        },
+        "chefAutomate-fqdn": {
+            "type": "string",
+            "value": "[reference('publicIPAddressesResource').outputs.chefAutomatefqdn.value]"
+        },
+        "workstation-fqdn":{
+            "type": "string",
+            "value": "[reference('publicIPAddressesResource').outputs.workstationfqdn.value]"
+        }
+    }
+}

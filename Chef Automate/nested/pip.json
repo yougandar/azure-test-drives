@@ -1,0 +1,46 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "networkSettings": {
+            "type": "secureObject"
+        }
+    },
+    "variables": {},
+    "resources": [
+ {
+            "name": "[parameters('networkSettings').wsPip]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "[parameters('networkSettings').networkApiVersion]",
+            "location": "[parameters('networkSettings').location]",
+            "properties": {
+                "publicIpAllocationMethod": "[parameters('networkSettings').publicIpAddressType]",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('networkSettings').wsClientDns]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('networkSettings').chefAutoPip]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "[parameters('networkSettings').networkApiVersion]",
+            "location": "[parameters('networkSettings').location]",
+            "properties": {
+                "publicIpAllocationMethod": "[parameters('networkSettings').publicIpAddressType]",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('networkSettings').chefAutoDns]"
+                }
+            }
+        }
+    ],
+    "outputs":{
+        "chefAutomatefqdn":{
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',parameters('networkSettings').chefAutoPip),'2015-06-15').dnsSettings.fqdn]"
+        },
+        "workstationfqdn":{
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',parameters('networkSettings').wsPip),'2015-06-15').dnsSettings.fqdn]"
+        }
+    }
+ }

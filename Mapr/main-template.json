@@ -1,0 +1,208 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "customVmName": {
+            "type": "string",
+            "defaultValue": "jjdemo",
+            "metadata": {
+                "description": "This is the name of the your VM"
+            }
+        },
+        "dnsLabelPrefix": {
+            "type": "string",
+            "defaultValue": "maprtd",
+            "metadata": {
+                "description": "DNS Label for the Public IP. Must be lowercase. It should match with the following regular expression: ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ or it will raise an error."
+            }
+        },
+        "adminUserName": {
+            "type": "string",
+            "defaultValue": "jsun",
+            "metadata": {
+                "description": "User Name for the Virtual Machine"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "SuperP@ssw0rd",
+            "metadata": {
+                "description": "Password for the Virtual Machine"
+            }
+        },
+        "osType": {
+            "type": "string",
+            "defaultValue": "Linux",
+            "allowedValues": [
+                "Windows",
+                "Linux"
+            ],
+            "metadata": {
+                "description": "This is the OS that your VM will be running"
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D2_v2",
+            "metadata": {
+                "description": "This is the size of your VM"
+            }
+        }
+    },
+    "variables": {
+        "publicIPAddressName": "userImagePublicIP",
+        "location": "westus",
+        "vmName": "[parameters('customVmName')]",
+        "nicName": "[concat(parameters('customVmName'),'Nic')]",
+        "vnet": "mapr-vnet",
+        "subnet": "mapr-subnet",
+        "publicIPAddressType": "Dynamic",
+        "uniqueString": "[uniquestring(resourceGroup().id)]",
+        "dataDiskVhdUri": "https://maprstrg.blob.core.windows.net/maprvhd/mapr520-mk-sandbox-dataDisk.vhd",
+        "osDiskVhdUri": "https://maprstrg.blob.core.windows.net/maprvhd/mapr520-mk-sandbox-osDisk.vhd",
+        "apiVersion": "2015-06-15",
+        "templatelink": "https://raw.githubusercontent.com/sharonrose/mapr/master/newvnet.json"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-01-01",
+            "name": "vnet-template",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('templatelink')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetworkName": {
+                        "value": "[variables('vnet')]"
+                    },
+                    "location":{
+                        "value": "[variables('location')]"
+                    },
+                    "subnetName": {
+                        "value": "[variables('subnet')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(parameters('dnsLabelPrefix'),variables('uniqueString'))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "vnet-template"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[reference('vnet-template').outputs.subnet1Ref.value]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('vmName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('vmName'),'-dataDisk')]",
+                            "lun": 0,
+                            "createOption": "FromImage",
+                            "image": {
+                                "uri": "[variables('dataDiskVhdUri')]"
+                            },
+                            "vhd": {
+                                "uri": "[concat('https://maprstrg.blob.core.windows.net/maprvhd',variables('uniqueString'),'/mapr520-mk-sandbox-dataDisk',variables('uniqueString'),'.vhd')]"
+                            }
+                        }
+                    ],
+                    "osDisk": {
+                        "name": "[concat(variables('vmName'),'-osDisk')]",
+                        "osType": "[parameters('osType')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage",
+                        "image": {
+                            "uri": "[variables('osDiskVhdUri')]"
+                        },
+                        "vhd": {
+                            "uri": "[concat('https://maprstrg.blob.core.windows.net/maprvhd',variables('uniqueString'),'/mapr520-mk-sandbox-osDisk',variables('uniqueString'),'.vhd')]"
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "ssh user name": {
+            "type": "string",
+            "value": "[parameters('adminUserName')]"
+        },
+        "ssh password": {
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+        },
+        "vm dns name": {
+            "type": "string",
+            "value": "[concat(parameters('dnsLabelPrefix'),variables('uniqueString'),'.',variables('location'),'.cloudapp.azure.com')]"
+        },
+        "web console": {
+            "type": "string",
+            "value": "[concat('https://',parameters('dnsLabelPrefix'),variables('uniqueString'),'.',variables('location'),'.cloudapp.azure.com:8443')]"
+        },
+        "grafana ui": {
+            "type": "string",
+            "value": "[concat('http://',parameters('dnsLabelPrefix'),variables('uniqueString'),'.',variables('location'),'.cloudapp.azure.com:3000')]"
+        },
+        "kibana ui": {
+            "type": "string",
+            "value": "[concat('http://',parameters('dnsLabelPrefix'),variables('uniqueString'),'.',variables('location'),'.cloudapp.azure.com:5601')]"
+        }
+    }
+}

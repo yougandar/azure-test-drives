@@ -1,0 +1,30 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUserName": {
+            "value": "suse"
+        },
+        "adminPassword": {
+            "value": "Sysga1n@12345"
+        },
+        "hpcUserName": {
+            "value": "hpc"
+        },
+        "osType": {
+            "value": "Linux"
+        },
+        "headNodeSize": {
+            "value": "Standard_A8"
+        },
+        "workerNodeSize": {
+            "value": "Standard_A8"
+        },
+        "workerNodeCount": {
+            "value": 1
+        },
+        "dataDiskSize": {
+            "value": 64
+        }
+    }
+}

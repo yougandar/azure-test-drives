@@ -1,0 +1,36 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "VirtualMachineSize": {
+            "value": "Standard_D2"
+        },
+        "accountName": {
+            "value": "licenseautomation"
+        },
+        "accountName1": {
+            "value": "licenseautomation1"
+        },
+        "variableName": {
+            "value": "licenseBlobVar"
+        },
+        "regionId": {
+            "value": "East US 2"
+        },
+        "sessionId": {
+            "value": "e5d20ebc-1564-48c0-8ebe-cee421eb8b03"
+        },
+        "sessionId1": {
+            "value": "b6154119-2beb-4c93-85f9-26a78e7c04ec"
+        },
+        "credentialName": {
+            "value": "cloudtryfortinet"
+        },
+        "userName": {
+            "value": "cloudtry@azurestorefortinet.onmicrosoft.com"
+        },
+        "password": {
+            "value": "40net999?"
+        }
+    }
+}
