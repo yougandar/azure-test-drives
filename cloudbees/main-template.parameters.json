@@ -1,0 +1,51 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "templateBaseUrl": {
+            "value": "https://gallery.azure.com/artifact/20151001/cloudbees.jenkins-platformjenkins-platform.1.0.10/Artifacts"
+        },
+        "scriptBaseUrl": {
+            "value": "https://aztdrepo.blob.core.windows.net/cloudbees/scripts/"
+        },
+        "location": {
+            "value": "centralus"
+        },
+        "storageAccountName": {
+            "value": "cbsa"
+        },
+        "storageAccountType": {
+            "value": "Standard_LRS"
+        },
+        "publicIPNewOrExisting": {
+            "value": "new"
+        },
+        "publicIPName": {
+            "value": "cb-jen"
+        },
+        "dnsNameForPublicIP": {
+            "value": "cb-jen"
+        },
+        "authenticationType": {
+            "value": "password"
+        },
+        "sshPublicKey": {
+            "value": ""
+        },
+        "adminUsername": {
+            "value": "testdrive-usr"
+        },
+        "adminPassword": {
+            "value": "testdrive-Usr123"
+        },
+        "jenkinsAdminPassword": {
+            "value": "testdrive-Usr123"
+        },
+        "vmSize": {
+            "value": "Standard_A2"
+        },
+        "size": {
+            "value": "Project"
+        }
+    }
+}
