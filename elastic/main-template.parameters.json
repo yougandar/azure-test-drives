@@ -1,0 +1,133 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmHostNamePrefix": {
+            "value": "ela"
+        },
+        "adminUsername": {
+            "value": "kibanauser"
+        },
+        "adminPassword": {
+            "value": "Kibana4205!"
+        },
+        "authenticationType": {
+            "value": "password"
+        },
+        "vNetName": {
+            "value": "es-net"
+        },
+        "vNetNewOrExisting": {
+            "value": "new"
+        },
+        "vNetNewAddressPrefix": {
+            "value": "10.0.0.0/24"
+        },
+        "vNetSubnetName": {
+            "value": "es-subnet"
+        },
+        "vNetNewSubnetAddressPrefix": {
+            "value": "10.0.0.0/25"
+        },
+        "vNetLoadBalancerIp": {
+            "value": "10.0.0.4"
+        },
+        "loadBalancerType": {
+            "value": "internal"
+        },
+        "esClusterName": {
+            "value": "elasticsearch"
+        },
+        "esVersion": {
+            "value": "5.1.2"
+        },
+        "esPlugins": {
+            "value": "Yes"
+        },
+        "esAdditionalPlugins": {
+            "value": ""
+        },
+        "securityAdminPassword": {
+            "value": "esadmin@123"
+        },
+        "securityReadPassword": {
+            "value": "esread@123"
+        },
+        "securityKibanaPassword": {
+            "value": "eskibana@123"
+        },
+        "userCompany": {
+            "value": "usercompany"
+        },
+        "userEmail": {
+            "value": "username"
+        },
+        "userFirstName": {
+            "value": "user"
+        },
+        "userLastName": {
+            "value": "name"
+        },
+        "userJobTitle": {
+            "value": "Other"
+        },
+        "userCountry": {
+            "value": "india"
+        },
+        "dataNodesAreMasterEligible": {
+            "value": "No"
+        },
+        "kibana": {
+            "value": "Yes"
+        },
+        "vmDataNodeCount": {
+            "type": "int"
+        },
+        "vmSizeKibana": {
+            "value": "Standard_A1"
+        },
+        "vmSizeMasterNodes": {
+            "value": "Standard_D1"
+        },
+        "jumpbox": {
+            "value": "No"
+        },
+        "vmSizeDataNodes": {
+            "value": "Standard_D1"
+        },
+        "vmClientNodeCount": {
+            "value": 0
+        },
+        "vmSizeClientNodes": {
+            "value": "Standard_D1"
+        },
+        "storageAccountType": {
+            "type": "string",
+            "value": "Default"
+        },
+        "vmDataDiskSize": {
+            "value": "Large"
+        },
+        "vmDataDiskCount": {
+            "value": 2
+        },
+        "vmSize": {
+            "value": "Standard_A1"
+        },
+        "azureCloudStorageAccountName": {
+            "value": ""
+        },
+        "azureCloudStorageAccountKey": {
+            "value": ""
+        },
+        "azureCloudPlugin": {
+            "value": "No"
+        },
+        "clientAdminUsername": {
+            "value": "clientuser"
+        },
+        "clientAdminPassword": {
+            "value": "client@12345"
+        }
+    }
+}
