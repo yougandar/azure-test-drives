@@ -1,0 +1,263 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "baseuri": {
+      "type": "string",
+	"metadata": {
+	    "description": ""
+	},
+	"defaultValue": "http://verticadeploy.eastus2.cloudapp.azure.com/vtdpm"
+    }
+  },
+    "variables": {
+	"username": "dbadmin",
+	"password":"Testdriveuser123",
+	"baseuri": "[concat(parameters('baseuri'),'/')]",
+	"newStorageAccountName": "[concat('vtd',uniquestring(resourceGroup().id))]",
+	"domainNameLabel": "[concat('vtd',uniquestring(resourceGroup().id))]",
+	"location": "[resourceGroup().location]",
+	"nsgName": "[concat('VTDNSG-',uniquestring(resourceGroup().id))]",
+	"storageAccountType": "Premium_LRS",
+	"publicIPName": "[concat('PIP',uniquestring(resourceGroup().id))]",
+	"pubIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPName'))]",
+	"publicIPAddressType": "Dynamic",
+	"subnetName":"Subnet-1",
+	"networkRG":"[resourceGroup().name]",
+	"addressPrefix":"10.0.0.0/24",
+	"subnetPrefix":"10.0.0.0/24",
+	"networkName":"[concat('VerticaTD',uniquestring(resourceGroup().id))]",
+	"vnetID": "[resourceId(variables('networkRG'),'Microsoft.Network/virtualNetworks',variables('networkName'))]",	
+	"subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
+	"vmNamePrefix": "VerticaTestDrive",
+	"installationCLI": "[concat('bash azuredeploy.sh ', variables('username'))]",
+	"PredictiveMaint": "bash Install_PredictiveMaint_Azure.sh",
+	"vmSize":"Standard_DS5_v2"
+    },
+  "resources": [
+	{
+	    "type": "Microsoft.Storage/storageAccounts",
+	    "name": "[variables('newStorageAccountName')]",
+	    "location": "[variables('location')]",
+	    "apiVersion": "2016-12-01",
+	    "properties": { },
+	    "sku":{"name":"[variables('storageAccountType')]"},
+	    "kind": "Storage"
+	},
+      {
+	  "apiVersion": "2016-12-01",
+	  "type": "Microsoft.Network/networkSecurityGroups",
+	  "name": "[variables('nsgName')]",
+	  "location": "[variables('location')]",
+	  "properties": {
+              "securityRules": [
+		  {
+		      "name": "SSH",
+		      "properties": {
+			  "description": "Allows SSH traffic",
+			  "protocol": "Tcp",
+			  "sourcePortRange": "*",
+			  "destinationPortRange": "22",
+			  "sourceAddressPrefix": "*",
+			  "destinationAddressPrefix": "*",
+			  "access": "Allow",
+			  "priority": 100,
+			  "direction": "Inbound"
+		      }
+		  },
+		  {
+		      "name": "MC_Access",
+		      "properties": {
+			  "description": "Allows SSH traffic",
+			  "protocol": "Tcp",
+			  "sourcePortRange": "*",
+			  "destinationPortRange": "5450",
+			  "sourceAddressPrefix": "*",
+			  "destinationAddressPrefix": "*",
+			  "access": "Allow",
+			  "priority": 102,
+			  "direction": "Inbound"
+		      }
+		  },
+		  {
+		      "name": "HTTP_Access",
+		      "properties": {
+			  "description": "Allows SSH traffic",
+			  "protocol": "Tcp",
+			  "sourcePortRange": "*",
+			  "destinationPortRange": "8080",
+			  "sourceAddressPrefix": "*",
+			  "destinationAddressPrefix": "*",
+			  "access": "Allow",
+			  "priority": 101,
+			  "direction": "Inbound"
+		      }
+		  }
+              ]
+	  }
+      },
+{
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('networkname')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-01",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },      {
+	  "type": "Microsoft.Network/publicIPAddresses",
+	  "name": "[variables('publicIPName')]",
+	  "location": "[variables('location')]",
+	  "apiVersion": "2017-03-01",
+	  "properties": {
+              "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+              "dnsSettings": {
+		   "domainNameLabel": "[variables('domainNameLabel')]"
+              }
+	  }
+      },
+      {
+	  "type": "Microsoft.Network/networkInterfaces",
+	  "name": "[concat('VTDNic',uniquestring(resourceGroup().id))]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+          "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPName'))]",
+	  "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+      ],
+      "apiVersion": "2017-03-01",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIpAddresses', variables('publicIPName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
+      }
+      },
+       {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('vmNamePrefix')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+          "[concat('Microsoft.Storage/storageAccounts/', variables('newStorageAccountName'))]",
+	  "[concat('Microsoft.Network/networkInterfaces/', 'VTDNic',uniquestring(resourceGroup().id))]"
+      ],
+      "apiVersion": "2017-03-30",
+      "properties": {
+       "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmNamePrefix')]",
+          "adminUsername": "[variables('username')]",
+          "adminPassword": "[variables('password')]",
+          "linuxConfiguration": ""
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "OpenLogic",
+            "offer": "CentOS",
+            "sku": "7.3",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[variables('vmNamePrefix')]",
+            "vhd": {
+              "uri": "[concat('http://',variables('newStorageAccountName'),'.blob.core.windows.net/vhds/',variables('vmNamePrefix'),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+            "dataDisks": [
+		{
+		    "name": "[concat(variables('vmNamePrefix'), 'datadisk1')]",
+		    "diskSizeGB": 128,
+		    "lun": 0,
+		    "vhd": {"Uri": "[concat('http://',variables('newStorageAccountName'),'.blob.core.windows.net/vhds/',variables('vmNamePrefix'),'dataDisk1.vhd')]"},
+		    "caching": "None",
+		    "createOption": "Empty"
+		}
+	    ]
+         },
+          "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('VTDNic',uniquestring(resourceGroup().id)))]"
+            }
+          ]
+        }
+      }
+       },
+      	{
+	    "apiVersion": "2017-03-30",
+	    "type": "Microsoft.Compute/virtualMachines/extensions",
+	    "name": "[concat(variables('vmNamePrefix'), '/s1')]",
+	    "location": "[variables('location')]",
+	    "dependsOn": [
+		"[concat('Microsoft.Compute/virtualMachines/', variables('vmNamePrefix'))]"
+	    ],
+	    "properties": {
+		"publisher": "Microsoft.OSTCExtensions",
+		"type": "CustomScriptForLinux",
+		"typeHandlerVersion": "1.5",
+		"autoUpgradeMinorVersion": true,
+		"settings": {
+		    "fileUris": [
+			"[concat(variables('baseuri'), 'azuredeploy.sh')]"
+		    ]
+		},
+		"protectedSettings": {
+		    "commandToExecute": "[variables('installationCLI')]"
+		}
+	    }
+	}
+
+
+
+  ],
+    "outputs": {
+	"Host Name": {
+	    "type": "string",
+	    "value": "[reference(variables('pubIpId')).dnsSettings.fqdn]"
+	},
+	"User Name": {
+	    "type": "string",
+	    "value": "[variables('username')]"
+	},
+	"Password": {
+	    "type": "string",
+	    "value": "[variables('password')]"
+	},
+	"Web Site": {
+	    "type": "string",
+	    "value": "[concat('http://',reference(variables('pubIpId')).dnsSettings.fqdn,':8080/index.php')]"
+	},
+	"Management Console": {
+	    "type": "string",
+	    "value": "[concat('https://',reference(variables('pubIpId')).dnsSettings.fqdn,':5450/webui')]"
+	}
+    }
+}
