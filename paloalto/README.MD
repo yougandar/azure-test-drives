@@ -1,2 +1,2 @@
 
-test-yogi1
+test-yogi
